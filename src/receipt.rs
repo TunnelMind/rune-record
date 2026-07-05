@@ -37,6 +37,12 @@ fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(ring::digest::digest(&ring::digest::SHA256, bytes).as_ref())
 }
 
+/// "sha256:{hex}" over the JCS canonicalization of a JSON value — the hash
+/// form receipts use for query_hash/guidance_hash and friends.
+pub fn sha256_jcs(v: &Value) -> Result<String> {
+    Ok(format!("sha256:{}", sha256_hex(&jcs(v)?)))
+}
+
 /// ISO 8601 UTC, Z suffix, millisecond precision (ADR-001 timestamp rule).
 pub fn iso8601_now_ms() -> String {
     let now = time::OffsetDateTime::now_utc();
