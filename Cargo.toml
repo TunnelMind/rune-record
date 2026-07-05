@@ -1,0 +1,20 @@
+[package]
+name = "rune-record"
+version = "0.1.0"
+edition = "2021"
+description = "ADR-001 attestation receipts + ADR-002 manifest validation for Rune nodes"
+license = "UNLICENSED"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_json_canonicalizer = "0.3"
+ring = "0.17"
+anyhow = "1"
+hex = "0.4"
+base64 = "0.22"
+toml = "0.8"
+time = { version = "0.3", features = ["formatting"] }
+
+[dev-dependencies]
+tempfile = "3"
