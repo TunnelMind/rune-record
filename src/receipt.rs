@@ -43,6 +43,12 @@ pub fn sha256_jcs(v: &Value) -> Result<String> {
     Ok(format!("sha256:{}", sha256_hex(&jcs(v)?)))
 }
 
+/// RFC 8785 canonical bytes — the one canonicalizer every signed structure
+/// in the workspace goes through (receipts, strand certs).
+pub fn jcs_bytes(v: &Value) -> Result<Vec<u8>> {
+    jcs(v)
+}
+
 /// ISO 8601 UTC, Z suffix, millisecond precision (ADR-001 timestamp rule).
 pub fn iso8601_now_ms() -> String {
     let now = time::OffsetDateTime::now_utc();
