@@ -320,3 +320,6 @@ mod tests {
         verify(&second).unwrap();
     }
 }
+
+#[cfg(test)]
+mod conformance;

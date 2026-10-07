@@ -1,0 +1,45 @@
+{
+  "receipt": {
+    "attestation_strength": "software",
+    "chain": {
+      "previous_receipt_hash": null,
+      "sequence": 0
+    },
+    "payload": {
+      "body_sha256": "1660da65e603aca826c79b1658ecd273aa712995f25352051478bc6cc2580eff",
+      "changed": true,
+      "fetched_at": "2026-10-07T00:00:00Z",
+      "fields": {
+        "links": 3,
+        "neg": -42,
+        "tags": [
+          "a",
+          "b"
+        ],
+        "title": "Ünïcode 😀 \"quoted\"\n"
+      },
+      "source": "oss-scout",
+      "status": 200,
+      "url": "https://example.test/a?b=c"
+    },
+    "payload_hash": "0x179313f10d64ec8f5c23d378e4858f10581ba712d2a02f0139a13fa268acc772",
+    "receipt_id": "01a1189a-b845-7ab8-9537-e80498012d59",
+    "receipt_version": "1.0",
+    "signature": {
+      "algorithm": "Ed25519",
+      "key_id": "tm-crawl-fe812c12",
+      "public_key": "6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=",
+      "value": "QVH0rK5Aox7mQFA6xVTg1gXo6J76MfzS5MSXgHLkL/naah7Jb1mIRouPSC8rbvAkAi8qRuIux5OoL51ydPuzCQ=="
+    },
+    "source": {
+      "endpoint": "/scout",
+      "lens": "tm-crawl",
+      "node_id": "k002-vector"
+    },
+    "timestamp": "2026-10-07T23:02:35.333Z",
+    "timestamp_proof": {
+      "method": "none"
+    }
+  },
+  "signing_bytes_jcs": "{\"attestation_strength\":\"software\",\"chain\":{\"previous_receipt_hash\":null,\"sequence\":0},\"payload_hash\":\"0x179313f10d64ec8f5c23d378e4858f10581ba712d2a02f0139a13fa268acc772\",\"receipt_id\":\"01a1189a-b845-7ab8-9537-e80498012d59\",\"receipt_version\":\"1.0\",\"signature\":{\"algorithm\":\"Ed25519\",\"key_id\":\"tm-crawl-fe812c12\",\"public_key\":\"6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw=\"},\"source\":{\"endpoint\":\"/scout\",\"lens\":\"tm-crawl\",\"node_id\":\"k002-vector\"},\"timestamp\":\"2026-10-07T23:02:35.333Z\",\"timestamp_proof\":{\"method\":\"none\"}}"
+}
