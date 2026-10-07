@@ -41,7 +41,10 @@ impl RuneSigner {
         // Pubkey is the node's public identity — companion file for one-shot enrollment.
         let _ = std::fs::write(key_path.with_extension("pub"), &pubkey_hex);
 
-        Ok(RuneSigner { keypair, pubkey_hex })
+        Ok(RuneSigner {
+            keypair,
+            pubkey_hex,
+        })
     }
 
     pub fn sign(&self, msg: &[u8]) -> Vec<u8> {

@@ -84,7 +84,7 @@ fn check_required(r: &Value) -> Result<()> {
         (&["action", "result"], "action.result"),
     ];
     for (path, name) in need {
-        if str_at(r, path).map_or(true, |s| s.is_empty()) {
+        if str_at(r, path).is_none_or(|s| s.is_empty()) {
             bail!("receipt missing required field: {name}");
         }
     }
@@ -168,8 +168,7 @@ pub fn verify(receipt: &Value, pubkey_hex: &str) -> Result<()> {
     check_tier_prefix(receipt)?;
 
     let signed_by = str_at(receipt, &["signed_by"]).unwrap();
-    if signed_by.starts_with("software:ed25519:") {
-        let fp = &signed_by["software:ed25519:".len()..];
+    if let Some(fp) = signed_by.strip_prefix("software:ed25519:") {
         if pubkey_hex.len() < 16 || fp != &pubkey_hex[..16] {
             bail!("signed_by fingerprint does not match supplied pubkey");
         }
@@ -229,7 +228,10 @@ mod tests {
     fn sign_verify_roundtrip() {
         let (_d, s) = signer();
         let r = boot_receipt(&s);
-        assert!(r["id"].as_str().unwrap().starts_with("attest:scry-rune-001:"));
+        assert!(r["id"]
+            .as_str()
+            .unwrap()
+            .starts_with("attest:scry-rune-001:"));
         verify(&r, s.pubkey_hex()).unwrap();
     }
 

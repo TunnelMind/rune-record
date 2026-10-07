@@ -160,7 +160,9 @@ pub fn load(file: &str) -> Result<(Manifest, Vec<String>)> {
 
     // Rule 5: manifest_hash verifies against the file bytes ("" = not yet stamped, build fills it).
     let expect = manifest_hash(file);
-    if !m.identity.manifest_hash.is_empty() && m.identity.manifest_hash != format!("sha256:{expect}") {
+    if !m.identity.manifest_hash.is_empty()
+        && m.identity.manifest_hash != format!("sha256:{expect}")
+    {
         bail!(
             "manifest_hash mismatch: file hashes to sha256:{expect}, manifest claims {}",
             m.identity.manifest_hash
@@ -216,15 +218,24 @@ mod tests {
         assert!(m.identity.manifest_hash.starts_with("sha256:"));
         // Any byte edit after stamping breaks the hash.
         let tampered = stamped.replace("heartbeat_interval_s = 60", "heartbeat_interval_s = 61");
-        assert!(load(&tampered).unwrap_err().to_string().contains("manifest_hash mismatch"));
+        assert!(load(&tampered)
+            .unwrap_err()
+            .to_string()
+            .contains("manifest_hash mismatch"));
     }
 
     #[test]
     fn non_negotiables_are_fatal() {
         let bad = EXAMPLE.replace("rejects_unattested = true", "rejects_unattested = false");
-        assert!(load(&bad).unwrap_err().to_string().contains("rejects_unattested"));
+        assert!(load(&bad)
+            .unwrap_err()
+            .to_string()
+            .contains("rejects_unattested"));
         let bad = EXAMPLE.replace("escalation_receipt = true", "escalation_receipt = false");
-        assert!(load(&bad).unwrap_err().to_string().contains("escalation_receipt"));
+        assert!(load(&bad)
+            .unwrap_err()
+            .to_string()
+            .contains("escalation_receipt"));
     }
 
     #[test]
@@ -242,7 +253,10 @@ mod tests {
             "attestation_tier = \"software\"",
             "attestation_tier = \"tee-tpm\"",
         );
-        assert!(load(&bad).unwrap_err().to_string().contains("cannot prove tier"));
+        assert!(load(&bad)
+            .unwrap_err()
+            .to_string()
+            .contains("cannot prove tier"));
     }
 
     #[test]

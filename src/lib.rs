@@ -5,4 +5,5 @@
 
 pub mod manifest;
 pub mod receipt;
+pub mod receipt_v1;
 pub mod signing;
