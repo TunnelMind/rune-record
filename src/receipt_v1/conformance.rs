@@ -26,11 +26,22 @@ fn vector() -> Value {
     serde_json::from_str(VECTOR).unwrap()
 }
 
-/// None (with a notice) when node is missing; otherwise receipt-verify's
-/// {valid, errors}. The receipt goes to a temp file, never under the repo.
+/// None (with a notice) when node or the built `~/receipt-verify` checkout is
+/// missing (CI runners have node but not the sibling repo); otherwise
+/// receipt-verify's {valid, errors}. The receipt goes to a temp file, never
+/// under the repo.
 fn verify_with_node(receipt: &Value) -> Option<Value> {
     if Command::new("node").arg("--version").output().is_err() {
         eprintln!("notice: node not on PATH; skipping receipt-verify interop test");
+        return None;
+    }
+    let dist = std::env::var_os("HOME")
+        .map(|h| Path::new(&h).join("receipt-verify/dist/index.js"))
+        .filter(|p| p.exists());
+    if dist.is_none() {
+        eprintln!(
+            "notice: ~/receipt-verify/dist/index.js missing; skipping receipt-verify interop test"
+        );
         return None;
     }
     let d = tempfile::tempdir().unwrap();
