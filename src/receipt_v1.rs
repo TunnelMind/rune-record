@@ -124,6 +124,30 @@ pub fn sign(payload: Value, signer: &RuneSigner, source: Source, opts: Options) 
     Ok(receipt)
 }
 
+/// Wrap a legacy ADR-001 `attest:` record (from `receipt::build_and_sign`)
+/// unchanged as the payload of a Receipt v1.0, so its own signature still
+/// verifies with `receipt::verify` once unwrapped. Checks only that it looks
+/// like an attest record; the attest signature is NOT re-verified here — the
+/// node wrapping it may not have the old signer's pubkey to hand.
+pub fn from_attest(
+    attest: &Value,
+    signer: &RuneSigner,
+    source: Source,
+    opts: Options,
+) -> Result<Value> {
+    let id = attest.get("id").and_then(Value::as_str).unwrap_or_default();
+    ensure!(id.starts_with("attest:"), "not an attest record: bad id");
+    ensure!(
+        attest.get("signature").is_some_and(Value::is_string),
+        "not an attest record: missing signature"
+    );
+    ensure!(
+        attest.get("version").is_some(),
+        "not an attest record: missing version"
+    );
+    sign(attest.clone(), signer, source, opts)
+}
+
 /// Pure-crypto verification (receipt-verify §4 steps 1-3): version, payload
 /// hash, and the signature against the embedded public key. No network.
 pub fn verify(receipt: &Value) -> Result<Verified> {
@@ -318,6 +342,45 @@ mod tests {
             json!({"previous_receipt_hash": want, "sequence": 1})
         );
         verify(&second).unwrap();
+    }
+
+    fn attest(s: &RuneSigner) -> Value {
+        crate::receipt::build_and_sign(
+            s,
+            "software",
+            "scry-rune-001",
+            "sha256:abc",
+            json!({"type": "boot", "result": "ok"}),
+            None,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn from_attest_wraps_unchanged() {
+        let (_d, s) = signer();
+        let a = attest(&s);
+        let r = from_attest(&a, &s, source(), Options::default()).unwrap();
+        verify(&r).unwrap();
+        assert_eq!(r["payload"], a);
+        // The legacy dialect still verifies on its own once unwrapped.
+        crate::receipt::verify(&r["payload"], s.pubkey_hex()).unwrap();
+    }
+
+    #[test]
+    fn from_attest_rejects_non_attest() {
+        let (_d, s) = signer();
+        let mut a = attest(&s);
+        a["id"] = json!("crawl:x");
+        for bad in [json!({}), json!([1]), json!("attest:x"), a] {
+            assert!(from_attest(&bad, &s, source(), Options::default()).is_err());
+        }
+        let mut a = attest(&s);
+        a.as_object_mut().unwrap().remove("signature");
+        assert!(from_attest(&a, &s, source(), Options::default()).is_err());
+        let mut a = attest(&s);
+        a.as_object_mut().unwrap().remove("version");
+        assert!(from_attest(&a, &s, source(), Options::default()).is_err());
     }
 }
 
