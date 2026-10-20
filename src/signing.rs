@@ -39,7 +39,12 @@ impl RuneSigner {
         let pubkey_hex = hex::encode(keypair.public_key().as_ref());
 
         // Pubkey is the node's public identity — companion file for one-shot enrollment.
-        let _ = std::fs::write(key_path.with_extension("pub"), &pubkey_hex);
+        // Non-fatal, but said out loud: familiar-record's NodeSigner (this loader's
+        // origin) warns the same way; re-synced 2026-10-19.
+        let pub_path = key_path.with_extension("pub");
+        if let Err(e) = std::fs::write(&pub_path, &pubkey_hex) {
+            eprintln!("warning: could not write {}: {e}", pub_path.display());
+        }
 
         Ok(RuneSigner {
             keypair,
