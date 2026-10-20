@@ -6,6 +6,12 @@
 //! The vector was made once with crawl-record's `Signer::from_seed([7u8; 32])`
 //! and `to_receipt`; `signing_bytes_jcs` is crawl-record's `jcs` of the
 //! receipt minus `payload` and `signature.value`.
+//!
+//! SCRIPT and `verify_with_node` are a synced copy of
+//! `tm-crawl/crawl-record/tests/verify_js.rs` (a separate repo with no
+//! dependency edge to here, so the harness cannot be shared). When
+//! receipt-verify's contract changes, change both. Last synced 2026-10-19
+//! (receipt-verify 2.0.0: the key must be pinned as a bundle).
 
 use std::path::Path;
 use std::process::Command;
@@ -18,8 +24,17 @@ const SCRIPT: &str = r#"
 import { readFileSync } from 'node:fs';
 const { verifyReceipt } = await import(process.env.HOME + '/receipt-verify/dist/index.js');
 const receipt = JSON.parse(readFileSync(process.argv[1], 'utf8'));
-const out = await verifyReceipt(receipt, { noFetchKeys: true, noFetchRevocations: true });
-console.log(JSON.stringify({ valid: out.valid, errors: out.errors }));
+// receipt-verify 2.0.0 never trusts a receipt's embedded key on its own, so the
+// signer's key is pinned as the bundle, the way an offline verifier would. The
+// bare call (no bundle) must refuse the record. An empty revocation feed keeps
+// both calls offline.
+const keys = { keys: [{ key_id: receipt.signature.key_id, algorithm: 'Ed25519',
+  public_key: receipt.signature.public_key, status: 'active' }] };
+const revocations = { feed_version: 1, updated_at: receipt.timestamp, revoked_keys: [], revoked_receipts: [] };
+const pinned = await verifyReceipt(receipt, { keys, revocations, noFetchKeys: true });
+const bare = await verifyReceipt(receipt, { revocations, noFetchKeys: true });
+const pick = (v) => ({ valid: v.valid, errors: v.errors });
+console.log(JSON.stringify({ pinned: pick(pinned), bare: pick(bare) }));
 "#;
 
 fn vector() -> Value {
@@ -28,8 +43,8 @@ fn vector() -> Value {
 
 /// None (with a notice) when node or the built `~/receipt-verify` checkout is
 /// missing (CI runners have node but not the sibling repo); otherwise
-/// receipt-verify's {valid, errors}. The receipt goes to a temp file, never
-/// under the repo.
+/// receipt-verify's `{pinned, bare}` results, each `{valid, errors}`. The
+/// receipt goes to a temp file, never under the repo.
 fn verify_with_node(receipt: &Value) -> Option<Value> {
     if Command::new("node").arg("--version").output().is_err() {
         eprintln!("notice: node not on PATH; skipping receipt-verify interop test");
@@ -92,16 +107,20 @@ fn rune_signed_verifies_in_js() {
     let Some(out) = verify_with_node(&r) else {
         return;
     };
-    assert_eq!(out["valid"], true, "{out}");
+    assert_eq!(out["pinned"]["valid"], true, "{out}");
+    assert_eq!(
+        out["bare"]["valid"], false,
+        "unpinned receipt must be refused: {out}"
+    );
 
     r["payload"]["ok"] = json!(false);
     let out = verify_with_node(&r).unwrap();
-    assert_eq!(out["valid"], false, "{out}");
+    assert_eq!(out["pinned"]["valid"], false, "{out}");
 }
 
 #[test]
 fn crawl_record_vector_verifies_in_js() {
     if let Some(out) = verify_with_node(&vector()["receipt"]) {
-        assert_eq!(out["valid"], true, "{out}");
+        assert_eq!(out["pinned"]["valid"], true, "{out}");
     }
 }
