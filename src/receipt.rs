@@ -167,7 +167,9 @@ pub fn verify(receipt: &Value, pubkey_hex: &str) -> Result<()> {
 
     let signed_by = str_at(receipt, &["signed_by"]).unwrap();
     if let Some(fp) = signed_by.strip_prefix("software:ed25519:") {
-        if pubkey_hex.len() < 16 || fp != &pubkey_hex[..16] {
+        // `get`, not a slice: the pubkey is caller input (argv, a .pub file)
+        // and may not have a char boundary at byte 16.
+        if pubkey_hex.get(..16) != Some(fp) {
             bail!("signed_by fingerprint does not match supplied pubkey");
         }
     }
@@ -262,6 +264,10 @@ mod tests {
         let (_d2, other) = signer();
         let r = boot_receipt(&s);
         assert!(verify(&r, other.pubkey_hex()).is_err());
+        // Short or non-ASCII pubkeys are an error, not a panic.
+        for bad in ["", "abc", "€€€€€€", &s.pubkey_hex()[..15]] {
+            assert!(verify(&r, bad).is_err(), "{bad:?}");
+        }
     }
 
     #[test]
