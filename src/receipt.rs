@@ -35,7 +35,9 @@ pub fn jcs_bytes(v: &Value) -> Result<Vec<u8>> {
     serde_json_canonicalizer::to_vec(v).context("JCS canonicalization failed")
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+/// Lowercase hex SHA-256 — the one spelling for every digest in the
+/// workspace (receipt ids, payload hashes, manifest hash, strand ids).
+pub fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(ring::digest::digest(&ring::digest::SHA256, bytes).as_ref())
 }
 

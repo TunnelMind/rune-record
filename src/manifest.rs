@@ -6,7 +6,7 @@ use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
-use crate::receipt::{tiers_for_prefix, TIERS};
+use crate::receipt::{sha256_hex, tiers_for_prefix, TIERS};
 
 pub const SECTIONS: [&str; 8] = [
     "identity",
@@ -108,7 +108,7 @@ pub fn manifest_hash(file: &str) -> String {
             out.push_str(line);
         }
     }
-    hex::encode(ring::digest::digest(&ring::digest::SHA256, out.as_bytes()).as_ref())
+    sha256_hex(out.as_bytes())
 }
 
 /// Parse + validate a manifest file's contents.

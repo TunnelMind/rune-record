@@ -11,7 +11,7 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde_json::{json, Value};
 
-use crate::receipt::{iso8601_now_ms, jcs_bytes};
+use crate::receipt::{iso8601_now_ms, jcs_bytes, sha256_hex};
 use crate::signing::{verify_ed25519, RuneSigner};
 
 pub const RECEIPT_VERSION: &str = "1.0";
@@ -47,10 +47,7 @@ pub struct Verified {
 }
 
 fn sha256_0x(bytes: &[u8]) -> String {
-    format!(
-        "0x{}",
-        hex::encode(ring::digest::digest(&ring::digest::SHA256, bytes).as_ref())
-    )
+    format!("0x{}", sha256_hex(bytes))
 }
 
 /// Refuse what JS would format or round differently from Rust: non-integers
@@ -333,10 +330,7 @@ mod tests {
             ..Default::default()
         };
         let second = signed(&s, json!({"n": 2}), opts).unwrap();
-        let want = format!(
-            "0x{}",
-            hex::encode(ring::digest::digest(&ring::digest::SHA256, prev.as_bytes()))
-        );
+        let want = format!("0x{}", sha256_hex(prev.as_bytes()));
         assert_eq!(
             second["chain"],
             json!({"previous_receipt_hash": want, "sequence": 1})
