@@ -29,7 +29,9 @@ pub fn tiers_for_prefix(signed_by: &str) -> &'static [&'static str] {
     }
 }
 
-fn jcs(v: &Value) -> Result<Vec<u8>> {
+/// RFC 8785 canonical bytes — the one canonicalizer every signed structure
+/// in the workspace goes through (receipts, strand certs).
+pub fn jcs_bytes(v: &Value) -> Result<Vec<u8>> {
     serde_json_canonicalizer::to_vec(v).context("JCS canonicalization failed")
 }
 
@@ -40,13 +42,7 @@ fn sha256_hex(bytes: &[u8]) -> String {
 /// "sha256:{hex}" over the JCS canonicalization of a JSON value — the hash
 /// form receipts use for query_hash/guidance_hash and friends.
 pub fn sha256_jcs(v: &Value) -> Result<String> {
-    Ok(format!("sha256:{}", sha256_hex(&jcs(v)?)))
-}
-
-/// RFC 8785 canonical bytes — the one canonicalizer every signed structure
-/// in the workspace goes through (receipts, strand certs).
-pub fn jcs_bytes(v: &Value) -> Result<Vec<u8>> {
-    jcs(v)
+    Ok(format!("sha256:{}", sha256_hex(&jcs_bytes(v)?)))
 }
 
 /// ISO 8601 UTC, Z suffix, millisecond precision (ADR-001 timestamp rule).
@@ -153,10 +149,10 @@ pub fn build_and_sign(
     check_tier_prefix(&receipt)?;
 
     // hex8 from the canonical receipt without id and signature (ADR-001 amended rule).
-    let hex8 = &sha256_hex(&jcs(&receipt)?)[..8];
+    let hex8 = &sha256_hex(&jcs_bytes(&receipt)?)[..8];
     receipt["id"] = json!(format!("attest:{agent_name}:{timestamp}:{hex8}"));
 
-    let sig = signer.sign(&jcs(&receipt)?);
+    let sig = signer.sign(&jcs_bytes(&receipt)?);
     receipt["signature"] = json!(base64::engine::general_purpose::STANDARD.encode(sig));
     Ok(receipt)
 }
@@ -181,11 +177,11 @@ pub fn verify(receipt: &Value, pubkey_hex: &str) -> Result<()> {
 
     let mut unsigned = receipt.clone();
     unsigned.as_object_mut().unwrap().remove("signature");
-    verify_ed25519(pubkey_hex, &jcs(&unsigned)?, &sig)?;
+    verify_ed25519(pubkey_hex, &jcs_bytes(&unsigned)?, &sig)?;
 
     let id = str_at(receipt, &["id"]).context("missing id")?.to_string();
     unsigned.as_object_mut().unwrap().remove("id");
-    let hex8 = &sha256_hex(&jcs(&unsigned)?)[..8];
+    let hex8 = &sha256_hex(&jcs_bytes(&unsigned)?)[..8];
     if !id.ends_with(&format!(":{hex8}")) {
         bail!("id hex8 does not match receipt content");
     }
