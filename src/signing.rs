@@ -12,26 +12,35 @@ pub struct RuneSigner {
 }
 
 impl RuneSigner {
+    /// Load the key at `key_path`; generate and write one (0600) if absent.
     pub fn load_or_generate(key_path: &Path) -> Result<Self> {
-        let pkcs8_bytes = if key_path.exists() {
-            let hx = std::fs::read_to_string(key_path)
-                .with_context(|| format!("reading key file {}", key_path.display()))?;
-            hex::decode(hx.trim()).context("decoding key file hex")?
-        } else {
-            let rng = ring::rand::SystemRandom::new();
-            let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng)
-                .map_err(|_| anyhow::anyhow!("Ed25519 key generation failed"))?;
-            let bytes = pkcs8.as_ref().to_vec();
-            if let Some(parent) = key_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            write_new_0600(key_path, hex::encode(&bytes).as_bytes())
-                .with_context(|| format!("writing key file {}", key_path.display()))?;
-            bytes
-        };
+        if key_path.exists() {
+            return Self::load(key_path);
+        }
+        let rng = ring::rand::SystemRandom::new();
+        let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng)
+            .map_err(|_| anyhow::anyhow!("Ed25519 key generation failed"))?;
+        if let Some(parent) = key_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        write_new_0600(key_path, hex::encode(pkcs8.as_ref()).as_bytes())
+            .with_context(|| format!("writing key file {}", key_path.display()))?;
+        Self::from_pkcs8(key_path, pkcs8.as_ref())
+    }
 
-        let keypair = Ed25519KeyPair::from_pkcs8(&pkcs8_bytes)
-            .map_err(|_| anyhow::anyhow!("failed to load Ed25519 keypair from PKCS8"))?;
+    /// Load an existing key; a missing file is an error, never a new key —
+    /// for callers that must only ever speak as a known identity
+    /// (`runecraft receipt sign`).
+    pub fn load(key_path: &Path) -> Result<Self> {
+        let hx = std::fs::read_to_string(key_path)
+            .with_context(|| format!("reading key file {}", key_path.display()))?;
+        let bytes = hex::decode(hx.trim()).context("decoding key file hex")?;
+        Self::from_pkcs8(key_path, &bytes)
+    }
+
+    fn from_pkcs8(key_path: &Path, pkcs8_bytes: &[u8]) -> Result<Self> {
+        let keypair = Ed25519KeyPair::from_pkcs8(pkcs8_bytes)
+            .map_err(|e| anyhow::anyhow!("{}: not an Ed25519 PKCS8 key: {e}", key_path.display()))?;
         let pubkey_hex = hex::encode(keypair.public_key().as_ref());
 
         // Pubkey is the node's public identity — companion file for one-shot enrollment.
@@ -107,6 +116,19 @@ mod tests {
         );
         let again = RuneSigner::load_or_generate(&path).unwrap();
         assert_eq!(again.pubkey_hex(), s.pubkey_hex());
+    }
+
+    #[test]
+    fn load_never_generates_and_names_a_bad_key() {
+        let d = tempfile::tempdir().unwrap();
+        let path = d.path().join("node.key");
+        assert!(RuneSigner::load(&path).is_err());
+        assert!(!path.exists(), "load must not create a key");
+        std::fs::write(&path, "abcd").unwrap();
+        let Err(err) = RuneSigner::load(&path) else {
+            panic!("4 hex chars loaded as a key");
+        };
+        assert!(err.to_string().contains("not an Ed25519 PKCS8 key"), "{err}");
     }
 
     #[test]
