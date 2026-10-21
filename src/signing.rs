@@ -25,12 +25,8 @@ impl RuneSigner {
             if let Some(parent) = key_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::write(key_path, hex::encode(&bytes))?;
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(key_path, std::fs::Permissions::from_mode(0o600))?;
-            }
+            write_new_0600(key_path, hex::encode(&bytes).as_bytes())
+                .with_context(|| format!("writing key file {}", key_path.display()))?;
             bytes
         };
 
@@ -71,4 +67,54 @@ pub fn verify_ed25519(pubkey_hex: &str, msg: &[u8], sig: &[u8]) -> Result<()> {
     UnparsedPublicKey::new(&ED25519, pk)
         .verify(msg, sig)
         .map_err(|_| anyhow::anyhow!("signature verification failed"))
+}
+
+/// Create `path` holding a secret at mode 0600 from the first byte — no
+/// window in which the file exists world-readable (write-then-chmod left
+/// one) — and never over a file that appeared since the caller looked: an
+/// identity key must not be silently replaced. Node key and strand key
+/// (rune-weave) both go through here, 2026-10-20.
+pub fn write_new_0600(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut opts = std::fs::OpenOptions::new();
+    opts.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    opts.open(path)?.write_all(contents)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_key_is_private_from_creation_and_reloads() {
+        let d = tempfile::tempdir().unwrap();
+        let path = d.path().join("node.key");
+        let s = RuneSigner::load_or_generate(&path).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "key file mode {mode:o}");
+        }
+        assert_eq!(
+            std::fs::read_to_string(path.with_extension("pub")).unwrap(),
+            s.pubkey_hex()
+        );
+        let again = RuneSigner::load_or_generate(&path).unwrap();
+        assert_eq!(again.pubkey_hex(), s.pubkey_hex());
+    }
+
+    #[test]
+    fn write_new_0600_refuses_an_existing_file() {
+        let d = tempfile::tempdir().unwrap();
+        let path = d.path().join("k");
+        write_new_0600(&path, b"one").unwrap();
+        assert!(write_new_0600(&path, b"two").is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"one");
+    }
 }
