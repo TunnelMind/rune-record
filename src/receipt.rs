@@ -164,6 +164,12 @@ pub fn build_and_sign(
 pub fn verify(receipt: &Value, pubkey_hex: &str) -> Result<()> {
     check_required(receipt)?;
     check_tier_prefix(receipt)?;
+    // Only Ed25519 is implemented; a record labelled otherwise must not pass
+    // on the strength of an Ed25519 signature it did not claim to carry.
+    let alg = str_at(receipt, &["alg"]).unwrap();
+    if alg != "ed25519" {
+        bail!("cannot verify alg '{alg}': only ed25519 is implemented");
+    }
 
     let signed_by = str_at(receipt, &["signed_by"]).unwrap();
     if let Some(fp) = signed_by.strip_prefix("software:ed25519:") {
@@ -268,6 +274,25 @@ mod tests {
         for bad in ["", "abc", "€€€€€€", &s.pubkey_hex()[..15]] {
             assert!(verify(&r, bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn mislabelled_alg_does_not_verify() {
+        let (_d, s) = signer();
+        // `extra` overwrites envelope keys, so this is the attack input: an
+        // Ed25519 signature under an "ecdsa-p256" label.
+        let r = build_and_sign(
+            &s,
+            "software",
+            "x",
+            "sha256:abc",
+            json!({"type": "boot", "result": "ok"}),
+            Some(json!({"alg": "ecdsa-p256"}).as_object().unwrap().clone()),
+        )
+        .unwrap();
+        assert_eq!(r["alg"], "ecdsa-p256");
+        let err = verify(&r, s.pubkey_hex()).unwrap_err().to_string();
+        assert!(err.contains("only ed25519"), "{err}");
     }
 
     #[test]
