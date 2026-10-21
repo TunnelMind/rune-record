@@ -51,8 +51,9 @@ fn sha256_0x(bytes: &[u8]) -> String {
 }
 
 /// Refuse what JS would format or round differently from Rust: non-integers
-/// and integers outside ±(2^53-1). Same rule as crawl-record's `jcs_into`.
-fn check_numbers(v: &Value) -> Result<()> {
+/// and integers outside ±(2^53-1). Public so tm-crawl's crawl-record can call
+/// it instead of the copy it kept when it adopted `jcs_bytes` (2026-10-19).
+pub fn check_numbers(v: &Value) -> Result<()> {
     const MAX_SAFE: u64 = (1 << 53) - 1;
     match v {
         Value::Number(n) => {
