@@ -3,6 +3,7 @@
 //! ponytail: tee-tpm signing lands as a second RuneSigner backend when the
 //! TPM HATs arrive — the receipt/verify path does not change.
 
+#[cfg(feature = "manifest")]
 pub mod manifest;
 pub mod receipt;
 pub mod receipt_v1;
