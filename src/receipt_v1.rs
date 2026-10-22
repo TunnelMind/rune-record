@@ -285,6 +285,65 @@ mod tests {
     }
 
     #[test]
+    fn standard_engine_refuses_non_canonical_base64() {
+        assert_eq!(B64.decode("Zg==").unwrap(), b"f");
+        for s in [
+            "Zh==",
+            "Zm9=",
+            "Zg=a",
+            "Z=g=",
+            "=Zg=",
+            "Zg==Zg==",
+            "Zm9v\n",
+            "Zm9v\r\nYg==",
+            "Zm9vYg==\n",
+            "====",
+        ] {
+            assert!(B64.decode(s).is_err(), "STANDARD accepted {s:?}");
+        }
+    }
+
+    /// Re-spellings of one canonical base64 string: trailing "\n", the last
+    /// data char swapped so only its unused trailing bits differ, and an
+    /// inner "\r\n". None is canonical, so each must fail decode and verify.
+    fn respellings(b64: &str) -> Vec<String> {
+        const ALPHA: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut bytes = b64.as_bytes().to_vec();
+        let i = b64.trim_end_matches('=').len() - 1;
+        let six = ALPHA.iter().position(|&c| c == bytes[i]).unwrap();
+        // The low bit is always unused when the string ends in "=" or "==".
+        bytes[i] = ALPHA[six ^ 1];
+        let trailing_bits = String::from_utf8(bytes).unwrap();
+        assert_ne!(trailing_bits, b64);
+        let mid = b64.len() / 2;
+        vec![
+            format!("{b64}\n"),
+            trailing_bits,
+            format!("{}\r\n{}", &b64[..mid], &b64[mid..]),
+        ]
+    }
+
+    #[test]
+    fn respelled_signature_fields_fail_verify() {
+        let (_d, s) = signer();
+        let r = signed(&s, json!({"ok": true}), Options::default()).unwrap();
+        verify(&r).unwrap();
+        for field in ["value", "public_key"] {
+            let orig = r["signature"][field].as_str().unwrap().to_string();
+            assert!(orig.ends_with('='));
+            for spelling in respellings(&orig) {
+                assert!(
+                    B64.decode(&spelling).is_err(),
+                    "{field}: {spelling:?} decoded"
+                );
+                let mut bad = r.clone();
+                bad["signature"][field] = json!(spelling);
+                assert!(verify(&bad).is_err(), "{field}: {spelling:?} verified");
+            }
+        }
+    }
+
+    #[test]
     fn unknown_major_version_rejected() {
         let (_d, s) = signer();
         let mut r = signed(&s, json!({}), Options::default()).unwrap();
