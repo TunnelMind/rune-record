@@ -1,0 +1,55 @@
+# First Rune: Scry-type, software tier, RPi-001. The worked example from ADR-002.
+# manifest_hash is stamped by `runecraft build` (empty = not yet stamped).
+
+[identity]
+name = "scry-rune-001"
+purpose = "signed first-party attack observation"
+version = "0.1.0"
+manifest_hash = ""
+pubkey = "software:ed25519:0000000000000000"
+
+[job]
+description = """
+Runs protocol emulators, converts captures to hash-only observation
+records, signs and forwards them to the ingest endpoint.
+"""
+owns = ["observation-spool"]
+reads = ["ingest.tunnelmind.ai/health"]
+calls = ["attestation"]
+
+[requirements]
+min_ram_gb = 1
+preferred_ram_gb = 4
+min_storage_gb = 8
+compute_tier = "lightweight"
+model = ""
+model_hash = ""
+
+[modes]
+full = "all emulators up, live forwarding, heartbeat on"
+degraded-spool = "ingest unreachable — spool observations locally, forward on recovery"
+offline = "no network — observe and spool only, no heartbeat"
+
+[escalation]
+local_model = ""
+escalate_model = "claude-sonnet-5"
+escalate_when = ["unknown-protocol-burst", "spool-corruption", "mode-thrash>3/hour"]
+escalation_receipt = true
+
+[migration]
+state_format = "1.0"
+serializes = ["observation-spool", "keypair-ref", "mode-history"]
+migration_time_s = 30
+resumable = true
+broadcast_on_migrate = true
+
+[mesh]
+advertises_to = "oai_resolver"
+fallback_for_absent_node = "serve_stale_max=300s"
+heartbeat_interval_s = 60
+rejects_unattested = true
+
+[receipt]
+attestation_tier = "software"
+signs_with = "software:key-path:/etc/rune/node.key"
+log_to = ["local:/var/rune/receipts", "ingest.tunnelmind.ai"]

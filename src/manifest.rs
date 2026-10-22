@@ -201,7 +201,7 @@ pub fn stamp_hash(file: &str) -> String {
 mod tests {
     use super::*;
 
-    const EXAMPLE: &str = include_str!("../../../manifests/scry-rune-001.toml");
+    const EXAMPLE: &str = include_str!("../tests/fixtures/scry-rune-001.toml");
 
     #[test]
     fn example_manifest_validates() {

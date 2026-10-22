@@ -3,7 +3,11 @@ name = "rune-record"
 version = "0.1.0"
 edition = "2021"
 description = "ADR-001 attestation receipts + ADR-002 manifest validation for Rune nodes"
-license = "UNLICENSED"
+license = "Apache-2.0"
+repository = "https://github.com/TunnelMind/rune-record"
+readme = "README.md"
+keywords = ["receipt", "attestation", "ed25519", "jcs"]
+categories = ["cryptography"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
