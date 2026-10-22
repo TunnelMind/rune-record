@@ -23,3 +23,7 @@ uuid = { version = "1", features = ["v7"] }
 
 [dev-dependencies]
 tempfile = "3"
+# raw_value lets tests/jcs_vectors.rs parse each vector on its own: three
+# vectors carry lone-surrogate inputs serde_json refuses, which would fail a
+# whole-file parse. Feature only, no new crate.
+serde_json = { version = "1", features = ["raw_value"] }
