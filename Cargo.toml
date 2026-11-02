@@ -2,11 +2,11 @@
 name = "rune-record"
 version = "0.1.0"
 edition = "2021"
-description = "ADR-001 attestation receipts + ADR-002 manifest validation for Rune nodes"
+description = "TunnelMind signed records: Receipt v1 signer/verifier (RFC 8785 JCS + Ed25519), ADR-001 receipts, ADR-002 Rune manifests"
 license = "Apache-2.0"
 repository = "https://github.com/TunnelMind/rune-record"
 readme = "README.md"
-keywords = ["receipt", "attestation", "ed25519", "jcs"]
+keywords = ["receipt", "attestation", "ed25519", "jcs", "offline-verification"]
 categories = ["cryptography"]
 
 [dependencies]

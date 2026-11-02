@@ -11,6 +11,18 @@ share, so a receipt made by any of them verifies the same way everywhere.
 Split out of TunnelMind's private Rune repository (history kept) so anyone can build and check the receipt code.
 The Rune OS and its mesh stay closed; the record format is public, like the data it attests.
 
+## Where it sits
+
+TunnelMind is a research house (facts, not verdicts) building an accountability kit for teams whose agents spend money:
+what the agent saw, when, which rule fired, why, checkable offline, rejected actions included. The Receipt v1 record this
+crate signs is the one dialect every part of that kit shares, so one verifier covers all of it: the Data API's exhibits,
+tm-crawl's fetch records and the weather agent's forecast, bet and refusal receipts (spec 027; the public demo at
+[tunnelmind.ai/weather](https://tunnelmind.ai/weather)).
+
+Today this public repo and `crates/rune-record` in TunnelMind's private `rune` repo are two copies of the crate, and
+tm-crawl and tm-weather pin the private one by git rev. Change the private copy first and mirror it here until the two
+are one.
+
 ## Receipts
 
 rune-record is the estate's one Rust implementation of three things:
