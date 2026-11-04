@@ -1,6 +1,14 @@
-//! ADR-001 attestation receipts: build → id → sign → verify.
+//! ADR-001 attestation receipts (`attest:` records): build → id → sign → verify.
 //! Receipts are handled as serde_json::Value so optional per-action blocks
 //! ride along without schema churn (verifiers must ignore unknown fields).
+//!
+//! Trust boundary: `verify` takes an untrusted receipt (a peer's, a file's) and
+//! a pubkey the CALLER trusts; it proves the receipt was signed by that key and
+//! is internally consistent (required fields, tier honesty, id), nothing about
+//! whether the key deserves the tier it claims. Inputs to `build_and_sign` come
+//! from trusted code: `extra` is merged after the envelope and can overwrite
+//! envelope keys (the alg test below relies on that to forge its attack input).
+//! Failure: every check is fail-closed (`Err`); nothing here panics on input.
 
 use anyhow::{bail, Context, Result};
 use base64::Engine;
@@ -19,7 +27,9 @@ pub const TIERS: [&str; 6] = [
 ];
 pub const RESULTS: [&str; 3] = ["ok", "error", "degraded"];
 
-/// signed_by prefix → tiers that prefix can prove (ADR-001 honesty rule).
+/// signed_by prefix → tiers that prefix can prove (ADR-001 honesty rule): a
+/// file-held key can never vouch for a hardware tier. Unknown prefixes prove
+/// nothing, so a receipt carrying one fails `check_tier_prefix`.
 pub fn tiers_for_prefix(signed_by: &str) -> &'static [&'static str] {
     match signed_by.split(':').next().unwrap_or("") {
         "software" => &["self-asserted", "software"],
@@ -30,7 +40,9 @@ pub fn tiers_for_prefix(signed_by: &str) -> &'static [&'static str] {
 }
 
 /// RFC 8785 canonical bytes — the one canonicalizer every signed structure
-/// in the workspace goes through (receipts, strand certs).
+/// in the workspace (and tm-crawl's crawl-record) goes through: receipts,
+/// strand certs. Two signers that canonicalise differently sign different
+/// bytes for the same JSON, so there must be exactly one.
 pub fn jcs_bytes(v: &Value) -> Result<Vec<u8>> {
     serde_json_canonicalizer::to_vec(v).context("JCS canonicalization failed")
 }
@@ -63,6 +75,7 @@ pub fn iso8601_now_ms() -> String {
     )
 }
 
+/// The string at a key path, None when any step is missing or not a string.
 fn str_at<'a>(v: &'a Value, path: &[&str]) -> Option<&'a str> {
     let mut cur = v;
     for p in path {
@@ -71,6 +84,9 @@ fn str_at<'a>(v: &'a Value, path: &[&str]) -> Option<&'a str> {
     cur.as_str()
 }
 
+/// The seven required string fields, present and non-empty, with `tier`,
+/// `action.result` and `alg` drawn from their closed vocabularies. Every
+/// `unwrap()` on these fields after this call is backed by it.
 fn check_required(r: &Value) -> Result<()> {
     let need: [(&[&str], &str); 7] = [
         (&["version"], "version"),
@@ -101,6 +117,8 @@ fn check_required(r: &Value) -> Result<()> {
     Ok(())
 }
 
+/// ADR-001 honesty rule: the claimed `tier` must be one the `signed_by`
+/// prefix can prove (a software key cannot claim `tee-tpm`).
 fn check_tier_prefix(r: &Value) -> Result<()> {
     let tier = str_at(r, &["tier"]).context("missing tier")?;
     let signed_by = str_at(r, &["signed_by"]).context("missing signed_by")?;
@@ -150,7 +168,8 @@ pub fn build_and_sign(
     check_required(&receipt)?;
     check_tier_prefix(&receipt)?;
 
-    // hex8 from the canonical receipt without id and signature (ADR-001 amended rule).
+    // hex8 from the canonical receipt without id and signature (ADR-001 amended
+    // rule), so the id commits to the content and `verify` can recompute it.
     let hex8 = &sha256_hex(&jcs_bytes(&receipt)?)[..8];
     receipt["id"] = json!(format!("attest:{agent_name}:{timestamp}:{hex8}"));
 
@@ -159,8 +178,12 @@ pub fn build_and_sign(
     Ok(receipt)
 }
 
-/// Full ADR-001 verification: signature, required fields, tier/prefix rule,
-/// id recomputation, and signed_by fingerprint vs the supplied pubkey.
+/// Full ADR-001 verification: required fields, tier/prefix rule, alg, the
+/// `signed_by` fingerprint against `pubkey_hex` (software tier only: other
+/// prefixes carry no fingerprint, so the caller's choice of key is the whole
+/// binding), the Ed25519 signature over the receipt minus `signature`, and
+/// the id's hex8 and agent name recomputed from the content. `pubkey_hex` is
+/// what the caller trusts; a receipt that verifies under it was signed by it.
 pub fn verify(receipt: &Value, pubkey_hex: &str) -> Result<()> {
     check_required(receipt)?;
     check_tier_prefix(receipt)?;

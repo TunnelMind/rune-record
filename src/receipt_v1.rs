@@ -1,10 +1,20 @@
 //! TunnelMind Receipt Format v1.0 — the one receipt format across TunnelMind.
 //! Same envelope and bytes as the data API's `wrapReceipt` and crawl-record's
-//! `to_receipt_for`, so `@tunnelmindai/receipt-verify` checks Rune receipts too.
+//! `to_receipt_for`, so `@tunnelmindai/receipt-verify` checks Rune receipts too
+//! (pinned by `conformance.rs`: a committed crawl-record vector and the JS
+//! verifier itself).
 //!
-//! `payload_hash` is "0x" + hex SHA-256 of the payload's JCS bytes; the
-//! Ed25519 signature covers the JCS bytes of the receipt with `payload` and
-//! `signature.value` removed (receipt-verify's `buildSigningObject`).
+//! Data flow: `sign` takes a caller's payload (`from_attest` when that
+//! payload is an ADR-001 record); `verify` is what consumers such as
+//! tm-crawl's parity tests call.
+//!
+//! Wire invariants: `payload_hash` is "0x" + hex SHA-256 of the payload's JCS
+//! bytes; the Ed25519 signature covers the JCS bytes of the receipt with
+//! `payload` and `signature.value` removed (receipt-verify's
+//! `buildSigningObject`); only JS-safe integers are signed (`check_numbers`).
+//! Trust boundary: `verify` takes an untrusted receipt and proves integrity
+//! under the key EMBEDDED in it; whether that key is a trusted TunnelMind key
+//! (bundle, revocations) is the caller's job. Fails closed, never panics.
 
 use anyhow::{bail, ensure, Context, Result};
 use base64::engine::general_purpose::STANDARD as B64;
@@ -53,6 +63,8 @@ fn sha256_0x(bytes: &[u8]) -> String {
 /// Refuse what JS would format or round differently from Rust: non-integers
 /// and integers outside ±(2^53-1). Public so tm-crawl's crawl-record can call
 /// it instead of the copy it kept when it adopted `jcs_bytes` (2026-10-19).
+/// A number the two sides print differently is a signature the JS verifier
+/// cannot check.
 pub fn check_numbers(v: &Value) -> Result<()> {
     const MAX_SAFE: u64 = (1 << 53) - 1;
     match v {
@@ -81,7 +93,9 @@ fn signing_bytes(receipt: &Value) -> Result<Vec<u8>> {
     jcs_bytes(&signing)
 }
 
-/// Wrap `payload` as a signed Receipt v1.0. Errors (rather than panics) on
+/// Wrap `payload` as a signed Receipt v1.0: a fresh UUIDv7 `receipt_id`, the
+/// current time, `payload_hash`, the chain link and the signature block.
+/// Errors (rather than panics) on
 /// payloads with non-integer or unsafe numbers.
 pub fn sign(payload: Value, signer: &RuneSigner, source: Source, opts: Options) -> Result<Value> {
     let raw_pubkey = hex::decode(signer.pubkey_hex()).context("decoding signer pubkey hex")?;
@@ -148,6 +162,8 @@ pub fn from_attest(
 
 /// Pure-crypto verification (receipt-verify §4 steps 1-3): version, payload
 /// hash, and the signature against the embedded public key. No network.
+/// Step 4 (is the key in a trusted bundle, is anything revoked) is the
+/// caller's: a pass here means "untampered since signed by `public_key`".
 pub fn verify(receipt: &Value) -> Result<Verified> {
     let str_at = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_string);
 
