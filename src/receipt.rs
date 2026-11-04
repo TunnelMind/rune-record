@@ -230,6 +230,82 @@ mod tests {
         .unwrap()
     }
 
+    /// xorshift64*: reproducible random inputs without a dev-dependency.
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 >> 12;
+            self.0 ^= self.0 << 25;
+            self.0 ^= self.0 >> 27;
+            self.0.wrapping_mul(0x2545_F491_4F6C_DD1D)
+        }
+        fn pick<'a>(&mut self, from: &[&'a str]) -> &'a str {
+            from[(self.next() % from.len() as u64) as usize]
+        }
+    }
+
+    /// A random JSON value up to `depth` levels deep. Strings mix the shapes
+    /// canonicalisers disagree on: escapes, control characters, non-BMP
+    /// characters (UTF-16 surrogate pairs), U+2028, combining marks. Numbers
+    /// are JS-safe integers only, as every signed TunnelMind record is.
+    fn random_value(rng: &mut Rng, depth: u32) -> Value {
+        const PIECES: &[&str] = &[
+            "a", "Z", "0", " ", "\"", "\\", "/", "\n", "\t", "\u{0}", "\u{1f}", "\u{7f}", "é",
+            "\u{301}", "\u{2028}", "\u{e000}", "\u{ffff}", "😀", "\u{10ffff}", "中",
+        ];
+        let s = |rng: &mut Rng| -> String {
+            (0..rng.next() % 6).map(|_| rng.pick(PIECES)).collect()
+        };
+        match (depth, rng.next() % 7) {
+            (_, 0) => Value::Null,
+            (_, 1) => Value::Bool(rng.next() & 1 == 0),
+            (_, 2) => {
+                let magnitude = (rng.next() % (1 << 53)) as i64;
+                json!(if rng.next() & 1 == 0 { magnitude } else { -magnitude })
+            }
+            (0, _) | (_, 3) => Value::String(s(rng)),
+            (_, 4) => (0..rng.next() % 4).map(|_| random_value(rng, depth - 1)).collect(),
+            _ => Value::Object(
+                (0..rng.next() % 5)
+                    .map(|_| (s(rng), random_value(rng, depth - 1)))
+                    .collect(),
+            ),
+        }
+    }
+
+    /// The canonical bytes are a fixed point: parsing them back gives the
+    /// same value, and canonicalising that again gives the same bytes. If
+    /// either failed, a verifier that re-parses a receipt would hash
+    /// different bytes from the ones that were signed.
+    #[test]
+    fn jcs_is_a_fixed_point_on_random_values() {
+        let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+        for _ in 0..2000 {
+            let v = random_value(&mut rng, 4);
+            let canon = jcs_bytes(&v).unwrap();
+            let back: Value = serde_json::from_slice(&canon).unwrap();
+            assert_eq!(back, v);
+            assert_eq!(jcs_bytes(&back).unwrap(), canon, "{v}");
+        }
+    }
+
+    /// RFC 8785 sorts keys by UTF-16 code units, not by bytes or chars: a
+    /// non-BMP key (a surrogate pair, 0xD83D...) sorts before U+E000, though
+    /// its UTF-8 bytes sort after. A canonicaliser that sorted bytes would
+    /// sign other bytes than receipt-verify checks. Lone surrogates cannot
+    /// reach the canonicaliser at all: the JSON parser refuses them.
+    #[test]
+    fn jcs_sorts_keys_by_utf16_and_lone_surrogates_never_parse() {
+        let v = json!({"\u{e000}": 1, "😀": 2, "a": 3});
+        assert_eq!(
+            String::from_utf8(jcs_bytes(&v).unwrap()).unwrap(),
+            "{\"a\":3,\"😀\":2,\"\u{e000}\":1}"
+        );
+        for lone in [r#""\ud800""#, r#""\udc00x""#, r#"{"\ud83d":1}"#] {
+            assert!(serde_json::from_str::<Value>(lone).is_err(), "{lone}");
+        }
+    }
+
     #[test]
     fn sign_verify_roundtrip() {
         let (_d, s) = signer();
@@ -247,6 +323,55 @@ mod tests {
         let mut r = boot_receipt(&s);
         r["action"]["result"] = json!("error");
         assert!(verify(&r, s.pubkey_hex()).is_err());
+    }
+
+    /// The signature covers every byte: flipping one bit of it, of the id,
+    /// or removing the signature all fail, each with its own reason.
+    #[test]
+    fn one_bit_or_one_field_off_does_not_verify() {
+        let (_d, s) = signer();
+        let r = boot_receipt(&s);
+        let err = |r: &Value| verify(r, s.pubkey_hex()).unwrap_err().to_string();
+
+        let mut flipped = r.clone();
+        let mut sig = base64::engine::general_purpose::STANDARD
+            .decode(r["signature"].as_str().unwrap())
+            .unwrap();
+        sig[17] ^= 0x01;
+        flipped["signature"] = json!(base64::engine::general_purpose::STANDARD.encode(sig));
+        assert!(err(&flipped).contains("signature verification failed"));
+
+        // The id is inside the signed bytes, so a changed id fails on the
+        // signature before the hex8 recomputation gets a turn.
+        let mut renamed = r.clone();
+        renamed["id"] = json!("attest:scry-rune-001:2026-01-01T00:00:00.000Z:00000000");
+        assert!(err(&renamed).contains("signature verification failed"));
+
+        let mut missing = r.clone();
+        missing.as_object_mut().unwrap().remove("signature");
+        assert!(err(&missing).contains("missing signature"));
+
+        let mut not_b64 = r.clone();
+        not_b64["signature"] = json!("***");
+        assert!(err(&not_b64).contains("base64"));
+
+        for (path, value) in [("tier", "silicon-root"), ("tier", "bogus")] {
+            let mut bad = r.clone();
+            bad[path] = json!(value);
+            assert!(verify(&bad, s.pubkey_hex()).is_err(), "{path}={value}");
+        }
+        verify(&r, s.pubkey_hex()).unwrap();
+    }
+
+    #[test]
+    fn prefix_tier_table() {
+        assert_eq!(tiers_for_prefix("software:ed25519:abcd"), ["self-asserted", "software"]);
+        assert_eq!(tiers_for_prefix("platform:x"), ["platform", "platform-enclave"]);
+        assert_eq!(tiers_for_prefix("tpm-ek:x"), ["tee-tpm", "silicon-root"]);
+        assert_eq!(tiers_for_prefix("tpm"), ["tee-tpm", "silicon-root"]);
+        for unknown in ["", ":", "SOFTWARE:ed25519:x", "hardware:x"] {
+            assert!(tiers_for_prefix(unknown).is_empty(), "{unknown:?}");
+        }
     }
 
     #[test]
