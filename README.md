@@ -42,7 +42,9 @@ rune-record = { git = "https://github.com/TunnelMind/rune-record", rev = "<sha>"
 
 Test vectors: `tests/vectors/jcs.json` is vendored from [receipt-verify](https://github.com/TunnelMind/receipt-verify),
 the JavaScript verifier. Change it in receipt-verify first, then re-vendor everywhere. `tests/jcs_vectors.rs` pins the
-file's sha256 (`81a79410…8cdd`), so a drifted copy fails before any vector runs.
+file's sha256 (`81a79410…8cdd`), so a drifted copy fails before any vector runs. The JS interop tests in
+`src/receipt_v1/conformance.rs` skip with a notice when node or a built sibling `~/receipt-verify` (`dist/index.js`) is
+missing; `TM_REQUIRE_JS_INTEROP=1` makes them panic instead.
 
 Security: `receipt_v1::verify` proves integrity only (the receipt is well-formed and signed by the key it names). The
 caller must resolve the returned `key_id`/`public_key` against a pinned key bundle; a valid signature alone does not
