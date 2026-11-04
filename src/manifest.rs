@@ -224,6 +224,41 @@ mod tests {
             .contains("manifest_hash mismatch"));
     }
 
+    /// stamp ∘ stamp = stamp, and the stamped value is exactly the hash of
+    /// the file with the line emptied (the shell check's input), so an
+    /// operator with sed and sha256sum computes the same value.
+    #[test]
+    fn stamping_is_idempotent_and_matches_the_hash_rule() {
+        let once = stamp_hash(EXAMPLE);
+        assert_eq!(stamp_hash(&once), once);
+        let emptied: String = once
+            .lines()
+            .map(|l| {
+                if l.starts_with("manifest_hash = ") {
+                    "manifest_hash = \"\"".to_string()
+                } else {
+                    l.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        let want = format!("manifest_hash = \"sha256:{}\"", sha256_hex(emptied.as_bytes()));
+        assert!(once.lines().any(|l| l == want), "{want}");
+        // Only a line-anchored key is rewritten: an indented or commented
+        // lookalike is literal bytes and counts toward the hash.
+        let decoy = format!("{EXAMPLE}# manifest_hash = \"old\"\n");
+        assert!(stamp_hash(&decoy).contains("# manifest_hash = \"old\""));
+    }
+
+    /// A key-file-shaped or binary file is "not valid TOML", never a panic.
+    #[test]
+    fn garbage_is_an_error() {
+        for bad in ["", "\u{0}\u{ff}", "[identity\nname = ", "[identity]\nname = 1\n"] {
+            assert!(load(bad).is_err(), "{bad:?}");
+        }
+    }
+
     #[test]
     fn non_negotiables_are_fatal() {
         let bad = EXAMPLE.replace("rejects_unattested = true", "rejects_unattested = false");

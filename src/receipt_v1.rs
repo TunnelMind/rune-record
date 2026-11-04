@@ -362,6 +362,75 @@ mod tests {
         assert!(signed(&s, json!({"x": -((1i64 << 53) - 1)}), Options::default()).is_ok());
     }
 
+    /// The JS-safe boundary exactly, at every nesting depth and for the
+    /// envelope fields the caller controls (`sequence`, `extensions`).
+    #[test]
+    fn number_policy_boundaries() {
+        const MAX: i64 = (1 << 53) - 1;
+        for ok in [
+            json!(0),
+            json!(MAX),
+            json!(-MAX),
+            json!([[[MAX]]]),
+            json!({"a": {"b": [-MAX, 1]}}),
+        ] {
+            assert!(check_numbers(&ok).is_ok(), "{ok}");
+        }
+        // 0.0 and 1.0 are integral but floats: serde_json keeps the type and
+        // JS prints "0", so they are refused like any other float.
+        for bad in [
+            json!(MAX + 1),
+            json!(-(MAX + 1)),
+            json!(u64::MAX),
+            json!(i64::MIN),
+            json!(0.0),
+            json!(1.0),
+            json!([{"x": [MAX + 1]}]),
+        ] {
+            assert!(check_numbers(&bad).is_err(), "{bad}");
+        }
+        let (_d, s) = signer();
+        let opts = Options {
+            sequence: (MAX as u64) + 1,
+            ..Default::default()
+        };
+        assert!(signed(&s, json!({}), opts).is_err(), "sequence is signed too");
+        let opts = Options {
+            extensions: Some(json!({"n": 2.5})),
+            ..Default::default()
+        };
+        assert!(signed(&s, json!({}), opts).is_err(), "extensions are signed too");
+    }
+
+    /// Every malformed envelope a verifier can meet is an `Err` naming the
+    /// field, never a panic: wrong key length, foreign algorithm, missing
+    /// blocks, non-object receipt.
+    #[test]
+    fn malformed_envelopes_are_errors_not_panics() {
+        let (_d, s) = signer();
+        let r = signed(&s, json!({"ok": true}), Options::default()).unwrap();
+        let err = |r: &Value| verify(r).unwrap_err().to_string();
+        let mut short_key = r.clone();
+        short_key["signature"]["public_key"] = json!(B64.encode([7u8; 31]));
+        assert!(err(&short_key).contains("32 bytes"));
+        let mut alg = r.clone();
+        alg["signature"]["algorithm"] = json!("RSA");
+        assert!(err(&alg).contains("algorithm"));
+        let mut no_sig = r.clone();
+        no_sig.as_object_mut().unwrap().remove("signature");
+        assert!(err(&no_sig).contains("missing signature"));
+        let mut no_payload = r.clone();
+        no_payload.as_object_mut().unwrap().remove("payload");
+        assert!(err(&no_payload).contains("missing payload"));
+        let mut no_hash = r.clone();
+        no_hash.as_object_mut().unwrap().remove("payload_hash");
+        assert!(err(&no_hash).contains("payload_hash"));
+        for not_an_object in [json!(null), json!([]), json!("1.0"), json!(1)] {
+            assert!(verify(&not_an_object).is_err(), "{not_an_object}");
+        }
+        verify(&r).unwrap();
+    }
+
     #[test]
     fn default_and_explicit_key_id() {
         let (_d, s) = signer();
