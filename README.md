@@ -19,9 +19,8 @@ crate signs is the one dialect every part of that kit shares, so one verifier co
 tm-crawl's fetch records and the weather agent's forecast, bet and refusal receipts (spec 027; the public demo at
 [tunnelmind.ai/weather](https://tunnelmind.ai/weather)).
 
-Today this public repo and `crates/rune-record` in TunnelMind's private `rune` repo are two copies of the crate, and
-tm-crawl and tm-weather pin the private one by git rev. Change the private copy first and mirror it here until the two
-are one.
+This repo is the canonical rune-record: change it here. Its consumers (tm-crawl, tm-weather, rune) repin to a tagged
+release of this repo in follow-up runs, not in this one.
 
 ## Receipts
 
@@ -42,7 +41,9 @@ rune-record = { git = "https://github.com/TunnelMind/rune-record", rev = "<sha>"
 
 Test vectors: `tests/vectors/jcs.json` is vendored from [receipt-verify](https://github.com/TunnelMind/receipt-verify),
 the JavaScript verifier. Change it in receipt-verify first, then re-vendor everywhere. `tests/jcs_vectors.rs` pins the
-file's sha256 (`81a79410…8cdd`), so a drifted copy fails before any vector runs.
+file's sha256 (`81a79410…8cdd`), so a drifted copy fails before any vector runs. The JS interop tests in
+`src/receipt_v1/conformance.rs` skip with a notice when node or a built sibling `~/receipt-verify` (`dist/index.js`) is
+missing; `TM_REQUIRE_JS_INTEROP=1` makes them panic instead.
 
 Security: `receipt_v1::verify` proves integrity only (the receipt is well-formed and signed by the key it names). The
 caller must resolve the returned `key_id`/`public_key` against a pinned key bundle; a valid signature alone does not

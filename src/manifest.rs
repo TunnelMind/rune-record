@@ -1,6 +1,18 @@
-//! ADR-002 agent manifest: TOML parse + the six validation rules.
-//! Build- and wake-fatal errors come back as Err; forward-compat unknown
-//! sections come back as warnings.
+//! ADR-002 agent manifest (`rune.toml`): TOML parse + the six validation rules.
+//!
+//! Data flow: `runecraft build` stamps the self-referential hash
+//! (`stamp_hash`) and binds the node key, `wake` validates before emitting
+//! the boot receipt; the escalation path reads the validated `Manifest` for
+//! the Oracle's action vocabulary.
+//!
+//! Trust boundary: the file is operator-authored and read from disk; `load`
+//! treats it as untrusted TOML. Build- and wake-fatal problems come back as
+//! `Err` (a Rune with an invalid manifest never wakes); unknown top-level
+//! sections are forward-compat warnings, never errors. Invariants enforced
+//! here, with no override flag anywhere: `escalation_receipt` and
+//! `rejects_unattested` are true, the modes include `full`, `offline` and a
+//! degraded one, the claimed tier is one the key prefix can prove, and a
+//! stamped `manifest_hash` matches the file bytes.
 
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
@@ -96,6 +108,8 @@ pub struct ReceiptCfg {
 /// ADR-002 hash rule: SHA-256 over the literal file bytes with the
 /// `manifest_hash` value emptied. Line-anchored, exactly like the sed check:
 ///   sed 's/^manifest_hash = .*/manifest_hash = ""/' rune.toml | sha256sum
+/// Byte-literal on purpose: a TOML round-trip would normalise whitespace and
+/// comments and the shell check would stop agreeing with this function.
 pub fn manifest_hash(file: &str) -> String {
     let mut out = String::with_capacity(file.len());
     for line in file.split_inclusive('\n') {
@@ -180,7 +194,9 @@ pub fn load(file: &str) -> Result<(Manifest, Vec<String>)> {
     Ok((m, warnings))
 }
 
-/// `runecraft build` half of rule 5: stamp the self-referential hash into the file text.
+/// `runecraft build` half of rule 5: stamp the self-referential hash into the
+/// file text. Idempotent: the hash is computed with the line emptied, so
+/// stamping a stamped file writes the same value again.
 pub fn stamp_hash(file: &str) -> String {
     let h = manifest_hash(file);
     let mut out = String::with_capacity(file.len() + 80);
@@ -222,6 +238,41 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("manifest_hash mismatch"));
+    }
+
+    /// stamp ∘ stamp = stamp, and the stamped value is exactly the hash of
+    /// the file with the line emptied (the shell check's input), so an
+    /// operator with sed and sha256sum computes the same value.
+    #[test]
+    fn stamping_is_idempotent_and_matches_the_hash_rule() {
+        let once = stamp_hash(EXAMPLE);
+        assert_eq!(stamp_hash(&once), once);
+        let emptied: String = once
+            .lines()
+            .map(|l| {
+                if l.starts_with("manifest_hash = ") {
+                    "manifest_hash = \"\"".to_string()
+                } else {
+                    l.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        let want = format!("manifest_hash = \"sha256:{}\"", sha256_hex(emptied.as_bytes()));
+        assert!(once.lines().any(|l| l == want), "{want}");
+        // Only a line-anchored key is rewritten: an indented or commented
+        // lookalike is literal bytes and counts toward the hash.
+        let decoy = format!("{EXAMPLE}# manifest_hash = \"old\"\n");
+        assert!(stamp_hash(&decoy).contains("# manifest_hash = \"old\""));
+    }
+
+    /// A key-file-shaped or binary file is "not valid TOML", never a panic.
+    #[test]
+    fn garbage_is_an_error() {
+        for bad in ["", "\u{0}\u{ff}", "[identity\nname = ", "[identity]\nname = 1\n"] {
+            assert!(load(bad).is_err(), "{bad:?}");
+        }
     }
 
     #[test]
