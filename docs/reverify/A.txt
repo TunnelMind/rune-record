@@ -1,0 +1,76 @@
+NOTE market source twc, paper settled on the NWS CLI (KATL 2026-10-30)
+NOTE market source twc, paper settled on the NWS CLI (KATL 2026-10-31)
+NOTE market source twc, paper settled on the NWS CLI (KATL 2026-11-01)
+NOTE market source twc, paper settled on the NWS CLI (KATL 2026-11-02)
+NOTE market source twc, paper settled on the NWS CLI (KATL 2026-11-03)
+NOTE market source twc, paper settled on the NWS CLI (KDEN 2026-10-30)
+NOTE market source twc, paper settled on the NWS CLI (KDEN 2026-10-31)
+NOTE market source twc, paper settled on the NWS CLI (KDEN 2026-11-01)
+NOTE market source twc, paper settled on the NWS CLI (KDEN 2026-11-02)
+NOTE market source twc, paper settled on the NWS CLI (KDEN 2026-11-03)
+NOTE market source twc, paper settled on the NWS CLI (KHOU 2026-10-30)
+NOTE market source twc, paper settled on the NWS CLI (KHOU 2026-10-31)
+NOTE market source twc, paper settled on the NWS CLI (KHOU 2026-11-01)
+NOTE market source twc, paper settled on the NWS CLI (KHOU 2026-11-02)
+NOTE market source twc, paper settled on the NWS CLI (KHOU 2026-11-03)
+NOTE market source twc, paper settled on the NWS CLI (KMDW 2026-10-30)
+NOTE market source twc, paper settled on the NWS CLI (KMDW 2026-10-31)
+NOTE market source twc, paper settled on the NWS CLI (KMDW 2026-11-01)
+NOTE market source twc, paper settled on the NWS CLI (KMDW 2026-11-02)
+NOTE market source twc, paper settled on the NWS CLI (KMDW 2026-11-03)
+NOTE market source twc, paper settled on the NWS CLI (KMIA 2026-10-30)
+NOTE market source twc, paper settled on the NWS CLI (KMIA 2026-10-31)
+NOTE market source twc, paper settled on the NWS CLI (KMIA 2026-11-01)
+NOTE market source twc, paper settled on the NWS CLI (KMIA 2026-11-02)
+NOTE market source twc, paper settled on the NWS CLI (KMIA 2026-11-03)
+NOTE derived: KATL-2026-10-30-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KATL-2026-10-30-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KATL-2026-10-30-1600: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KATL-2026-10-30-1700: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KATL-2026-11-02-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-30-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-30-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-30-1600: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-31-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-31-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-31-1600: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-10-31-1700: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-11-02-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-11-02-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-11-02-1600: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-11-03-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-11-03-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KDEN-2026-11-03-1600: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KMDW-2026-10-30-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KMDW-2026-10-30-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KMDW-2026-11-03-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KMDW-2026-11-03-1500: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+NOTE derived: KMIA-2026-11-03-1400: market_implied is derived from the Kalshi book, which is not archived; checked for internal consistency only, not against Kalshi
+FAIL 3 schedule: KATL 2026-11-04: slot KATL-2026-11-04-1400 has no commit
+FAIL 3 schedule: KDEN 2026-10-28: schedule published at 2026-10-28T23:57:01.000Z is not before slot KDEN-2026-10-28-1400 at 2026-10-28T20:00:00.000Z
+FAIL 3 schedule: KDEN 2026-10-28: schedule genTime 1793231819 not before first decision_time (unix ms 1793217600000)
+FAIL 3 schedule: slot KDEN-2026-10-28-1400: commit genTime 1793231820 is more than 300 s after decision_time 2026-10-28T20:00:00.000Z
+FAIL 3 schedule: slot KDEN-2026-10-28-1500: commit genTime 1793231820 is more than 300 s after decision_time 2026-10-28T21:00:00.000Z
+FAIL 3 schedule: slot KDEN-2026-10-28-1600: commit genTime 1793231820 is more than 300 s after decision_time 2026-10-28T22:00:00.000Z
+FAIL 3 schedule: slot KDEN-2026-10-28-1700: commit genTime 1793231820 is more than 300 s after decision_time 2026-10-28T23:00:00.000Z
+FAIL 3 schedule: KDEN 2026-11-04: slot KDEN-2026-11-04-1400 has no commit
+FAIL 3 schedule: KHOU 2026-10-28: schedule published at 2026-10-28T23:57:00.000Z is not before slot KHOU-2026-10-28-1400 at 2026-10-28T19:00:00.000Z
+FAIL 3 schedule: KHOU 2026-10-28: schedule genTime 1793231818 not before first decision_time (unix ms 1793214000000)
+FAIL 3 schedule: slot KHOU-2026-10-28-1400: commit genTime 1793231818 is more than 300 s after decision_time 2026-10-28T19:00:00.000Z
+FAIL 3 schedule: slot KHOU-2026-10-28-1500: commit genTime 1793231818 is more than 300 s after decision_time 2026-10-28T20:00:00.000Z
+FAIL 3 schedule: slot KHOU-2026-10-28-1600: commit genTime 1793231818 is more than 300 s after decision_time 2026-10-28T21:00:00.000Z
+FAIL 3 schedule: slot KHOU-2026-10-28-1700: commit genTime 1793231819 is more than 300 s after decision_time 2026-10-28T22:00:00.000Z
+FAIL 3 schedule: KHOU 2026-11-04: slot KHOU-2026-11-04-1400 has no commit
+FAIL 3 schedule: KMDW 2026-11-04: slot KMDW-2026-11-04-1400 has no commit
+FAIL 3 schedule: KMIA 2026-11-04: slot KMIA-2026-11-04-1400 has no commit
+FAIL 6 nws: KATL 2026-10-30: scores brier_bp 1866 log_score_milli -381, recomputed 3191 -535
+FAIL 6 nws: KDEN 2026-10-28: source mismatch: labelled NwsCli, the station config says Twc
+FAIL 6 nws: KDEN 2026-10-30: scores brier_bp 7548 log_score_milli -1722, recomputed 14587 -2984
+FAIL 6 nws: KDEN 2026-10-31: scores brier_bp 16926 log_score_milli -3629, recomputed 15790 -3507
+FAIL 6 nws: KDEN 2026-11-02: scores brier_bp 2285 log_score_milli -443, recomputed 6773 -1094
+FAIL 6 nws: KDEN 2026-11-03: scores brier_bp 3861 log_score_milli -584, recomputed 6100 -931
+FAIL 6 nws: KHOU 2026-10-28: source mismatch: labelled NwsCli, the station config says Twc
+FAIL 6 nws: KMDW 2026-10-30: scores brier_bp 180 log_score_milli -110, recomputed 317 -163
+FAIL 6 nws: KMDW 2026-11-03: scores brier_bp 696 log_score_milli -186, recomputed 2218 -456
+FAIL 6 nws: KMIA 2026-11-03: scores brier_bp 5999 log_score_milli -836, recomputed 9152 -1196
+exit 1

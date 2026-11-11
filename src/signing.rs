@@ -1,11 +1,27 @@
-//! Software-tier Ed25519 signing — generalized from familiar-record's NodeSigner.
-//! Key file stores the PKCS8 document as hex (one line). Same scheme Familiar
-//! ships today, so a Familiar node key IS a valid software-tier Rune key.
+//! Software-tier Ed25519 signing — generalized from familiar-record's NodeSigner:
+//! the node identity key, its loader and the one signature verifier the
+//! crate uses.
+//!
+//! Data flow: `RuneSigner` is built once per process from a key file and
+//! signs every receipt; `verify_ed25519` is the primitive under
+//! `receipt::verify` and `receipt_v1::verify`.
+//!
+//! Key file: the PKCS#8 v2 document as one line of hex, the scheme Familiar
+//! ships, so a Familiar node key IS a valid software-tier Rune key. The file
+//! is created 0600 from its first byte and never overwritten (`write_new_0600`).
+//! Trust boundary: the key file is operator-owned; its contents are parsed by
+//! ring and a malformed file is an error naming the path, never a panic.
+//! `verify_ed25519`'s inputs are untrusted (hex and signature bytes from a
+//! peer or a file) and fail closed. The public key is written to a `.pub`
+//! sibling on every load: a convenience for enrollment, not a secret.
 
 use anyhow::{Context, Result};
 use ring::signature::{Ed25519KeyPair, KeyPair, UnparsedPublicKey, ED25519};
 use std::path::Path;
 
+/// A loaded Ed25519 keypair plus its public key as lowercase hex (64 chars),
+/// which is the node's identity everywhere (`signed_by` fingerprint, the
+/// receipt's `public_key`).
 pub struct RuneSigner {
     keypair: Ed25519KeyPair,
     pubkey_hex: String,
@@ -38,6 +54,9 @@ impl RuneSigner {
         Self::from_pkcs8(key_path, &bytes)
     }
 
+    /// Parse the PKCS#8 document and derive the public key. ring checks that
+    /// the embedded public key matches the private half, so a spliced or
+    /// truncated file cannot load as a different identity.
     fn from_pkcs8(key_path: &Path, pkcs8_bytes: &[u8]) -> Result<Self> {
         let keypair = Ed25519KeyPair::from_pkcs8(pkcs8_bytes)
             .map_err(|e| anyhow::anyhow!("{}: not an Ed25519 PKCS8 key: {e}", key_path.display()))?;
@@ -57,10 +76,12 @@ impl RuneSigner {
         })
     }
 
+    /// The 64-byte Ed25519 signature over `msg` (callers pass JCS bytes).
     pub fn sign(&self, msg: &[u8]) -> Vec<u8> {
         self.keypair.sign(msg).as_ref().to_vec()
     }
 
+    /// Lowercase hex of the 32-byte public key.
     pub fn pubkey_hex(&self) -> &str {
         &self.pubkey_hex
     }
@@ -71,6 +92,9 @@ impl RuneSigner {
     }
 }
 
+/// Ed25519 verification of `sig` over `msg` under the hex-encoded public key.
+/// All three inputs may come from a peer: bad hex, a wrong-length key or a
+/// forged signature are all the same `Err`, never a panic.
 pub fn verify_ed25519(pubkey_hex: &str, msg: &[u8], sig: &[u8]) -> Result<()> {
     let pk = hex::decode(pubkey_hex).context("decoding pubkey hex")?;
     UnparsedPublicKey::new(&ED25519, pk)
