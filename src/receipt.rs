@@ -1,6 +1,10 @@
 //! ADR-001 attestation receipts (`attest:` records): build → id → sign → verify.
-//! Receipts are handled as serde_json::Value so optional per-action blocks
-//! ride along without schema churn (verifiers must ignore unknown fields).
+//!
+//! Data flow: `build_and_sign` is called by runecraft `wake`, rune-escalate
+//! (every Oracle call) and rune-weave (strand messages); `verify` by runecraft
+//! `verify` and by rune-weave on every peer receipt. Receipts are handled as
+//! `serde_json::Value` so optional per-action blocks ride along without schema
+//! churn (verifiers ignore unknown fields).
 //!
 //! Trust boundary: `verify` takes an untrusted receipt (a peer's, a file's) and
 //! a pubkey the CALLER trusts; it proves the receipt was signed by that key and

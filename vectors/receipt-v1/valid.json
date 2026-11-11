@@ -1,0 +1,23 @@
+{
+  "description": "A fresh receipt under its own active key.",
+  "expected": "valid",
+  "js_receipt_verify_2_0_0": "valid",
+  "name": "valid",
+  "receipt": "{\"attestation_strength\":\"software\",\"chain\":{\"previous_receipt_hash\":null,\"sequence\":0},\"payload\":{\"n\":[1,-2],\"ok\":true},\"payload_hash\":\"0xa6e0af7b4a99ae520738e2b8d483ec49d29abe3f05b0fef91027cadd9a778efa\",\"receipt_id\":\"01a1c72f-3233-7219-9374-84df17c04705\",\"receipt_version\":\"1.0\",\"signature\":{\"algorithm\":\"Ed25519\",\"key_id\":\"k1\",\"public_key\":\"cFC9GKvEy9J+iVpKYeRgIBdDYqdJZc3S3YpJii9omPA=\",\"value\":\"hb/e9GE0hPcpEaRbwDQqlcPE9yHqQD2ufGTMfwmGQhYZXN8qrpVK/E7A/RZCeM4fxVlbvDDPJex6QgWTz8M6Cg==\"},\"source\":{\"endpoint\":\"/boot\",\"lens\":\"rune\",\"node_id\":\"scry-rune-001\"},\"timestamp\":\"2026-11-10T20:38:41.459Z\",\"timestamp_proof\":{\"method\":\"none\"}}",
+  "trust": {
+    "keys": {
+      "keys": [
+        {
+          "algorithm": "Ed25519",
+          "key_id": "k1",
+          "public_key": "cFC9GKvEy9J+iVpKYeRgIBdDYqdJZc3S3YpJii9omPA=",
+          "status": "active"
+        }
+      ]
+    },
+    "revocations": {
+      "revoked_keys": [],
+      "revoked_receipts": []
+    }
+  }
+}

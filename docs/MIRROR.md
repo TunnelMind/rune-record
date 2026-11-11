@@ -3,7 +3,7 @@
 G001 of spec `001-rune-record-mirror-1`. Compares this repo `origin/main` `0959ac5` with rune
 `0018299` (`00182997c6b8ec98ff990abcae7a123970bc26de`), paths `crates/rune-record/**` and
 `vectors/receipt-v1/**`. Rune is the source; this repo becomes its generated copy
-(`scripts/sync-from-rune.sh`, T003). Every row is **planned**; T003 flips them to done.
+(`scripts/sync-from-rune.sh`, T003). Every row is **done** (T003 sync at `0018299`, recorded in `RUNE_SYNC`).
 Supersedes `docs/DIVERGENCE.md` (older revs).
 
 Measured 2026-11-10 with:
@@ -29,27 +29,27 @@ move to tests / dropped + reason. Changed-line counts are `diff | grep -c '^[<>]
 
 | path / fn | here | rune | which side is right | disposition |
 |---|---|---|---|---|
-| `src/lib.rs` header doc | consumer list ("tm-crawl, wgd, xcheck-rune; tm and familiar after spec 026") | module map, untrusted-input rule | rune (review §2: the consumer list is false) | take rune |
-| `src/lib.rs` `pub mod manifest` gate | `#[cfg(feature = "manifest")]` | no gate, `toml` not optional | here (wx-receipt-verify uses `default-features = false`) | patch hunk |
-| `src/manifest.rs` header doc | "`runecraft build`…the escalation path" | "runecraft `build`…rune-escalate" | rune (wording only) | take rune |
-| `src/manifest.rs` `tests::EXAMPLE` | `include_str!("../tests/fixtures/scry-rune-001.toml")` | `include_str!("../../../manifests/scry-rune-001.toml")` (escapes this repo) | here for the path (file bytes identical: `git -C ~/rune show 0018299:manifests/scry-rune-001.toml \| diff - tests/fixtures/scry-rune-001.toml` = 0) | patch hunk — **not in plan/FR-004's hunk list; needed or the 8 manifest tests fail to build** |
-| `src/receipt.rs` header doc | 2-line data-flow note | names callers (runecraft, rune-escalate, rune-weave) | rune (doc only, 8 lines) | take rune |
-| `src/receipt_v1.rs` docs on module, `Verified`, `check_numbers`, `sign`, `verify` | "trust is the caller's job" | "signature only, no trust decision; use `verify_pinned`" | rune (`verify_pinned` exists there) | take rune |
-| `src/receipt_v1.rs` `mod vectors` (`#[cfg(test)]`), `mod trust; pub use trust::*` | absent | present | rune | take rune |
-| `src/receipt_v1.rs` `tests::standard_engine_refuses_non_canonical_base64` | present (K002) | absent | here (no rune test covers it) | moved in T002 to `tests/receipt_v1_base64.rs` (still planned for T003 sync) |
-| `src/receipt_v1.rs` `tests::respellings` (helper) | present | absent | here | moved in T002 to `tests/receipt_v1_base64.rs` with its caller (still planned for T003 sync) |
-| `src/receipt_v1.rs` `tests::respelled_signature_fields_fail_verify` | present | absent | here | moved in T002 to `tests/receipt_v1_base64.rs` (still planned for T003 sync) |
-| `src/receipt_v1/conformance.rs` module doc | "Last synced 2026-10-19…Set TM_REQUIRE_JS_INTEROP=1…" | no `TM_REQUIRE_JS_INTEROP` sentence | here for the sentence, rune otherwise | patch hunk (doc lines with `skip()`) |
-| `src/receipt_v1/conformance.rs` `verify_with_node` | two `return skip(..)` | two inline `eprintln!` + `return None` | here (`TM_REQUIRE_JS_INTEROP=1` turns a skip into a panic) | patch hunk |
-| `src/receipt_v1/conformance.rs` `skip` | present | absent | here | patch hunk |
-| `src/signing.rs` docs (module, `RuneSigner`, `load`, `write_new_0600`) | older wording, "written…on every load" | rewrite-only-if-changed wording | rune | take rune |
-| `src/signing.rs` `load` body | `std::fs::write(&pub_path, ..)` | `write_pub_if_changed(&pub_path, ..)` | rune (atomic `.pub`) | take rune |
-| `src/signing.rs` `write_pub_if_changed` | absent | present | rune | take rune |
-| `src/signing.rs` `tests::new_key` (helper) | absent | present | rune | take rune |
-| `src/signing.rs` `tests::pub_untouched_when_unchanged` | absent | present | rune | take rune |
-| `src/signing.rs` `tests::pub_stale_is_replaced` | absent | present | rune | take rune |
-| `src/signing.rs` `tests::pub_reader_never_sees_partial` | absent | present | rune | take rune |
-| `tests/vectors/crawl_record_v1.json` | same bytes | same bytes (0 changed lines) | equal | take rune (mirrored so drift is caught) |
+| `src/lib.rs` header doc | consumer list ("tm-crawl, wgd, xcheck-rune; tm and familiar after spec 026") | module map, untrusted-input rule | rune (review §2: the consumer list is false) | take rune (done) |
+| `src/lib.rs` `pub mod manifest` gate | `#[cfg(feature = "manifest")]` | no gate, `toml` not optional | here (wx-receipt-verify uses `default-features = false`) | patch hunk 1 (done) |
+| `src/manifest.rs` header doc | "`runecraft build`…the escalation path" | "runecraft `build`…rune-escalate" | rune (wording only) | take rune (done) |
+| `src/manifest.rs` `tests::EXAMPLE` | `include_str!("../tests/fixtures/scry-rune-001.toml")` | `include_str!("../../../manifests/scry-rune-001.toml")` (escapes this repo) | here for the path (file bytes identical: `git -C ~/rune show 0018299:manifests/scry-rune-001.toml \| diff - tests/fixtures/scry-rune-001.toml` = 0) | patch hunk 2 (done) — **not in plan/FR-004's hunk list; needed or the 8 manifest tests fail to build** |
+| `src/receipt.rs` header doc | 2-line data-flow note | names callers (runecraft, rune-escalate, rune-weave) | rune (doc only, 8 lines) | take rune (done) |
+| `src/receipt_v1.rs` docs on module, `Verified`, `check_numbers`, `sign`, `verify` | "trust is the caller's job" | "signature only, no trust decision; use `verify_pinned`" | rune (`verify_pinned` exists there) | take rune (done) |
+| `src/receipt_v1.rs` `mod vectors` (`#[cfg(test)]`), `mod trust; pub use trust::*` | absent | present | rune | take rune (done) |
+| `src/receipt_v1.rs` `tests::standard_engine_refuses_non_canonical_base64` | present (K002) | absent | here (no rune test covers it) | moved in T002 to `tests/receipt_v1_base64.rs` (done: the T003 sync leaves `tests/` alone) |
+| `src/receipt_v1.rs` `tests::respellings` (helper) | present | absent | here | moved in T002 to `tests/receipt_v1_base64.rs` with its caller (done: the T003 sync leaves `tests/` alone) |
+| `src/receipt_v1.rs` `tests::respelled_signature_fields_fail_verify` | present | absent | here | moved in T002 to `tests/receipt_v1_base64.rs` (done: the T003 sync leaves `tests/` alone) |
+| `src/receipt_v1/conformance.rs` module doc | "Last synced 2026-10-19…Set TM_REQUIRE_JS_INTEROP=1…" | no `TM_REQUIRE_JS_INTEROP` sentence | here for the sentence, rune otherwise | patch hunk 4 (done; doc lines with `skip()`) |
+| `src/receipt_v1/conformance.rs` `verify_with_node` | two `return skip(..)` | two inline `eprintln!` + `return None` | here (`TM_REQUIRE_JS_INTEROP=1` turns a skip into a panic) | patch hunk 4 (done) |
+| `src/receipt_v1/conformance.rs` `skip` | present | absent | here | patch hunk 4 (done) |
+| `src/signing.rs` docs (module, `RuneSigner`, `load`, `write_new_0600`) | older wording, "written…on every load" | rewrite-only-if-changed wording | rune | take rune (done) |
+| `src/signing.rs` `load` body | `std::fs::write(&pub_path, ..)` | `write_pub_if_changed(&pub_path, ..)` | rune (atomic `.pub`) | take rune (done) |
+| `src/signing.rs` `write_pub_if_changed` | absent | present | rune | take rune (done) |
+| `src/signing.rs` `tests::new_key` (helper) | absent | present | rune | take rune (done) |
+| `src/signing.rs` `tests::pub_untouched_when_unchanged` | absent | present | rune | take rune (done) |
+| `src/signing.rs` `tests::pub_stale_is_replaced` | absent | present | rune | take rune (done) |
+| `src/signing.rs` `tests::pub_reader_never_sees_partial` | absent | present | rune | take rune (done) |
+| `tests/vectors/crawl_record_v1.json` | same bytes | same bytes (0 changed lines) | equal | take rune (done; mirrored so drift is caught) |
 | `Cargo.toml` | see table below | see table below | here for metadata/licence/feature | not mirrored; public-only kept (version → 0.2.0 in T004) |
 
 Shared fns not listed have identical bodies (checked: the non-comment `diff -u` hunks are only the
@@ -59,20 +59,20 @@ rows above). No fn exists only here except `respellings`, the two base64 tests a
 
 | path / fn | here | rune | which side is right | disposition |
 |---|---|---|---|---|
-| `src/receipt_v1/trust.rs` (`TrustBundle`, `KeyBundle`, `KeyEntry`, `RevocationFeed`, `Rejection`, `parse_strict`, `verify_pinned`, 38 tests) | absent | present | rune | take rune |
-| `src/receipt_v1/vectors.rs` (`receipt_v1_vectors_agree`, `#[ignore] write_receipt_v1_vectors`) | absent | present | rune | take rune |
-| `src/receipt_v1/vectors.rs` `vectors_dir` | — | `CARGO_MANIFEST_DIR/../../vectors/receipt-v1` (escapes this repo) | here needs `vectors/receipt-v1` | patch hunk |
-| `vectors/receipt-v1/README.md` | absent | present | rune | take rune |
-| `vectors/receipt-v1/bad_timestamp.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/duplicate_key.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/expired_key.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/float_payload.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/missing_public_key.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/missing_receipt_id.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/revoked_key.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/tier_too_high.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/unknown_key.json` | absent | present | rune | take rune |
-| `vectors/receipt-v1/valid.json` | absent | present | rune | take rune |
+| `src/receipt_v1/trust.rs` (`TrustBundle`, `KeyBundle`, `KeyEntry`, `RevocationFeed`, `Rejection`, `parse_strict`, `verify_pinned`, 38 tests) | absent | present | rune | take rune (done) |
+| `src/receipt_v1/vectors.rs` (`receipt_v1_vectors_agree`, `#[ignore] write_receipt_v1_vectors`) | absent | present | rune | take rune (done) |
+| `src/receipt_v1/vectors.rs` `vectors_dir` | — | `CARGO_MANIFEST_DIR/../../vectors/receipt-v1` (escapes this repo) | here needs `vectors/receipt-v1` | patch hunk 3 (done) |
+| `vectors/receipt-v1/README.md` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/bad_timestamp.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/duplicate_key.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/expired_key.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/float_payload.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/missing_public_key.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/missing_receipt_id.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/revoked_key.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/tier_too_high.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/unknown_key.json` | absent | present | rune | take rune (done) |
+| `vectors/receipt-v1/valid.json` | absent | present | rune | take rune (done) |
 
 `vectors/receipt-v1/README.md` names `crates/rune-record/src/receipt_v1/vectors.rs` and
 `cargo test -p rune-record`; rune paths, kept verbatim (it is rune's doc).
@@ -152,12 +152,20 @@ sha256 is pinned at `tests/jcs_vectors.rs:12`:
 Editing it here alone fails `vendored_file_is_byte_identical`. Rune's crate and vectors: 0 hits.
 Follow-up (owner): rename in receipt-verify first, then re-vendor everywhere.
 
-## Patch hunks (`scripts/rune-mirror.patch`, T003)
+## Patch hunks (`scripts/rune-mirror.patch`, T003 — done)
 
-1. `src/lib.rs`: `#[cfg(feature = "manifest")]` on `pub mod manifest`.
-2. `src/manifest.rs`: `EXAMPLE` → `../tests/fixtures/scry-rune-001.toml`.
-3. `src/receipt_v1/vectors.rs`: `vectors_dir` → `CARGO_MANIFEST_DIR/vectors/receipt-v1`.
-4. `src/receipt_v1/conformance.rs`: `skip()`, its two call sites, the `TM_REQUIRE_JS_INTEROP` doc sentence.
+All four apply with `patch -p1 --forward` to rune `0018299`; `scripts/sync-from-rune.sh --check` pins the
+patch's sha256 in `RUNE_SYNC`. T002 moved every public-only test, so no test hunk is needed.
+
+1. `src/lib.rs`: `#[cfg(feature = "manifest")]` on `pub mod manifest` — wx-receipt-verify builds with
+   `default-features = false`, so `toml` must stay optional.
+2. `src/manifest.rs`: `tests::EXAMPLE` → `../tests/fixtures/scry-rune-001.toml` — rune's path climbs out of
+   the crate to `manifests/`, which this repo does not have (same bytes).
+3. `src/receipt_v1/vectors.rs`: `vectors_dir` → `CARGO_MANIFEST_DIR/vectors/receipt-v1` — the vectors sit at
+   the repo root here, two levels up in rune.
+4. `src/receipt_v1/conformance.rs`: `skip()`, its two call sites in `verify_with_node`, and the
+   `TM_REQUIRE_JS_INTEROP` module-doc sentence — a run that must prove JS interop cannot pass on a skip.
+   Rune's other doc wording is taken as is (the old "Last synced 2026-10-19" phrasing is dropped).
 
 ## Verify this file
 

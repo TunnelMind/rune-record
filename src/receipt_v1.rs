@@ -4,17 +4,18 @@
 //! (pinned by `conformance.rs`: a committed crawl-record vector and the JS
 //! verifier itself).
 //!
-//! Data flow: `sign` takes a caller's payload (`from_attest` when that
-//! payload is an ADR-001 record); `verify` is what consumers such as
-//! tm-crawl's parity tests call.
+//! Data flow: `sign` is called by runecraft `receipt sign` with a caller's
+//! payload (`from_attest` when that payload is an ADR-001 record); `verify` by
+//! runecraft `receipt verify` and by tm-crawl's parity tests.
 //!
 //! Wire invariants: `payload_hash` is "0x" + hex SHA-256 of the payload's JCS
 //! bytes; the Ed25519 signature covers the JCS bytes of the receipt with
 //! `payload` and `signature.value` removed (receipt-verify's
 //! `buildSigningObject`); only JS-safe integers are signed (`check_numbers`).
-//! Trust boundary: `verify` takes an untrusted receipt and proves integrity
-//! under the key EMBEDDED in it; whether that key is a trusted TunnelMind key
-//! (bundle, revocations) is the caller's job. Fails closed, never panics.
+//! Trust boundary: `verify` is signature only, no trust decision: it proves
+//! an untrusted receipt is intact under the key EMBEDDED in it, which anyone
+//! can mint. For the trust call (key bundle, window, tier ceiling,
+//! revocations) use `verify_pinned`. Both fail closed, never panic.
 
 use anyhow::{bail, ensure, Context, Result};
 use base64::engine::general_purpose::STANDARD as B64;
@@ -47,8 +48,9 @@ pub struct Options {
     pub sequence: u64,
 }
 
-/// What a successful [`verify`] vouches for. Whether `public_key` is a
-/// trusted TunnelMind key is the caller's call (key bundle, revocations).
+/// What a successful [`verify`] vouches for: signature only, no trust
+/// decision (`public_key` is the receipt's own). Use `verify_pinned` for the
+/// trust call.
 #[derive(Debug)]
 pub struct Verified {
     pub receipt_id: String,
@@ -61,10 +63,9 @@ fn sha256_0x(bytes: &[u8]) -> String {
 }
 
 /// Refuse what JS would format or round differently from Rust: non-integers
-/// and integers outside ±(2^53-1). Public so tm-crawl's crawl-record can call
-/// it instead of the copy it kept when it adopted `jcs_bytes` (2026-10-19).
-/// A number the two sides print differently is a signature the JS verifier
-/// cannot check.
+/// and integers outside ±(2^53-1). A number the two sides print differently
+/// is a signature the JS verifier cannot check. Public for tm-crawl's
+/// crawl-record, which applies the same rule at its own signing boundary.
 pub fn check_numbers(v: &Value) -> Result<()> {
     const MAX_SAFE: u64 = (1 << 53) - 1;
     match v {
@@ -95,8 +96,7 @@ fn signing_bytes(receipt: &Value) -> Result<Vec<u8>> {
 
 /// Wrap `payload` as a signed Receipt v1.0: a fresh UUIDv7 `receipt_id`, the
 /// current time, `payload_hash`, the chain link and the signature block.
-/// Errors (rather than panics) on
-/// payloads with non-integer or unsafe numbers.
+/// Errors (rather than panics) on payloads with non-integer or unsafe numbers.
 pub fn sign(payload: Value, signer: &RuneSigner, source: Source, opts: Options) -> Result<Value> {
     let raw_pubkey = hex::decode(signer.pubkey_hex()).context("decoding signer pubkey hex")?;
     let key_id = opts
@@ -160,10 +160,10 @@ pub fn from_attest(
     sign(attest.clone(), signer, source, opts)
 }
 
-/// Pure-crypto verification (receipt-verify §4 steps 1-3): version, payload
-/// hash, and the signature against the embedded public key. No network.
-/// Step 4 (is the key in a trusted bundle, is anything revoked) is the
-/// caller's: a pass here means "untampered since signed by `public_key`".
+/// Signature only, no trust decision (receipt-verify §4 steps 1-3): version,
+/// payload hash, and the signature against the embedded public key. A pass
+/// means "untampered since signed by `public_key`", not "trusted"; use
+/// `verify_pinned` for the trust call (bundle, tier, revocations).
 pub fn verify(receipt: &Value) -> Result<Verified> {
     let str_at = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_string);
 
@@ -466,3 +466,8 @@ mod tests {
 
 #[cfg(test)]
 mod conformance;
+#[cfg(test)]
+mod vectors;
+
+mod trust;
+pub use trust::*;
