@@ -19,21 +19,24 @@ crate signs is the one dialect every part of that kit shares, so one verifier co
 tm-crawl's fetch records and the weather agent's forecast, bet and refusal receipts (spec 027; the public demo at
 [tunnelmind.ai/weather](https://tunnelmind.ai/weather)).
 
-This repo is the canonical rune-record: change it here. Its consumers (tm-crawl, tm-weather, rune) repin to a tagged
-release of this repo in follow-up runs, not in this one.
+This repo is generated from `crates/rune-record` in the private Rune repository, at the commit recorded in
+[`RUNE_SYNC`](RUNE_SYNC). To change the code, change it in rune, then run `scripts/sync-from-rune.sh` here
+(`--check` reports drift without writing). [docs/MIRROR.md](docs/MIRROR.md) lists which paths are synced and which
+are public-only.
 
 ## Receipts
 
 rune-record is the estate's one Rust implementation of three things:
 
 - **JCS canonicaliser** (RFC 8785): `receipt::jcs_bytes`, backed by `serde_json_canonicalizer`.
-- **Receipt v1.0 signer/verifier**: `receipt_v1::sign` and `receipt_v1::verify`.
+- **Receipt v1.0 signer/verifier**: `receipt_v1::sign`, `receipt_v1::verify` (integrity only) and
+  `receipt_v1::verify_pinned` (also checks the signer against a `receipt_v1::TrustBundle`).
 - **Node-key loader**: `signing::RuneSigner::load` never generates a key (a missing file is an error);
   `RuneSigner::load_or_generate` is the explicit generator.
 
-Consumers: tm-crawl, wgd and xcheck-rune today; tm and familiar after spec 026. Each pins a git rev, never a floating
-branch. tm and familiar take `default-features = false`, which drops the `manifest` feature (ADR-002 validation, the
-only user of toml and its tree) and keeps receipts:
+Consumers pin a git rev or a tagged release, never a floating branch. Receipt-only consumers take
+`default-features = false`, which drops the `manifest` feature (ADR-002 validation, the only user of toml and its tree)
+and keeps receipts:
 
 ```toml
 rune-record = { git = "https://github.com/TunnelMind/rune-record", rev = "<sha>", default-features = false }
@@ -47,7 +50,8 @@ missing; `TM_REQUIRE_JS_INTEROP=1` makes them panic instead.
 
 Security: `receipt_v1::verify` proves integrity only (the receipt is well-formed and signed by the key it names). The
 caller must resolve the returned `key_id`/`public_key` against a pinned key bundle; a valid signature alone does not
-say the signer is trusted.
+say the signer is trusted. `receipt_v1::verify_pinned` does that resolution: it checks the signature against the
+`TrustBundle`'s key, never the one the receipt embeds, and applies the bundle's expiry and revocations.
 
 ```
 cargo test

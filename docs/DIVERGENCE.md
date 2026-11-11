@@ -1,3 +1,4 @@
+> Superseded by [docs/MIRROR.md](MIRROR.md) (2026-11-10).
 # rune-record: what differs between A, B and C
 
 Measured 2026-11-04 for spec 125 (D4, task T001). This file records facts and the
