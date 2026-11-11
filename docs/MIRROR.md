@@ -36,9 +36,9 @@ move to tests / dropped + reason. Changed-line counts are `diff | grep -c '^[<>]
 | `src/receipt.rs` header doc | 2-line data-flow note | names callers (runecraft, rune-escalate, rune-weave) | rune (doc only, 8 lines) | take rune |
 | `src/receipt_v1.rs` docs on module, `Verified`, `check_numbers`, `sign`, `verify` | "trust is the caller's job" | "signature only, no trust decision; use `verify_pinned`" | rune (`verify_pinned` exists there) | take rune |
 | `src/receipt_v1.rs` `mod vectors` (`#[cfg(test)]`), `mod trust; pub use trust::*` | absent | present | rune | take rune |
-| `src/receipt_v1.rs` `tests::standard_engine_refuses_non_canonical_base64` | present (K002) | absent | here (no rune test covers it) | move to tests (`tests/receipt_v1_base64.rs`, T002) |
-| `src/receipt_v1.rs` `tests::respellings` (helper) | present | absent | here | move to tests (with its caller) |
-| `src/receipt_v1.rs` `tests::respelled_signature_fields_fail_verify` | present | absent | here | move to tests (T002) |
+| `src/receipt_v1.rs` `tests::standard_engine_refuses_non_canonical_base64` | present (K002) | absent | here (no rune test covers it) | moved in T002 to `tests/receipt_v1_base64.rs` (still planned for T003 sync) |
+| `src/receipt_v1.rs` `tests::respellings` (helper) | present | absent | here | moved in T002 to `tests/receipt_v1_base64.rs` with its caller (still planned for T003 sync) |
+| `src/receipt_v1.rs` `tests::respelled_signature_fields_fail_verify` | present | absent | here | moved in T002 to `tests/receipt_v1_base64.rs` (still planned for T003 sync) |
 | `src/receipt_v1/conformance.rs` module doc | "Last synced 2026-10-19…Set TM_REQUIRE_JS_INTEROP=1…" | no `TM_REQUIRE_JS_INTEROP` sentence | here for the sentence, rune otherwise | patch hunk (doc lines with `skip()`) |
 | `src/receipt_v1/conformance.rs` `verify_with_node` | two `return skip(..)` | two inline `eprintln!` + `return None` | here (`TM_REQUIRE_JS_INTEROP=1` turns a skip into a panic) | patch hunk |
 | `src/receipt_v1/conformance.rs` `skip` | present | absent | here | patch hunk |
