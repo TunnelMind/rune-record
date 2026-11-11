@@ -1,14 +1,16 @@
-//! rune-record — ADR-001 receipts + ADR-002 manifests for Rune nodes.
-//! Software tier today (file-held Ed25519, Familiar-compatible key scheme);
-//! ponytail: tee-tpm signing lands as a second RuneSigner backend when the
-//! TPM HATs arrive — the receipt/verify path does not change.
+//! rune-record — the trust primitives every other crate in this workspace
+//! (and tm-crawl's crawl-record) builds on. No I/O beyond the key file.
 //!
-//! The estate's one Rust RFC 8785 JCS canonicaliser (`receipt::jcs_bytes`),
-//! Receipt v1.0 signer/verifier (`receipt_v1::sign`/`verify`) and node-key
-//! loader (`signing::RuneSigner::load`, never generates). Consumers: tm-crawl,
-//! wgd, xcheck-rune; tm and familiar after spec 026. `receipt_v1::verify`
-//! proves integrity only: resolve the returned `key_id`/`public_key` against a
-//! pinned key bundle before trusting the signer.
+//! - `signing`: the Ed25519 node key (`RuneSigner`) and `verify_ed25519`;
+//! - `receipt`: ADR-001 `attest:` records, `jcs_bytes` (the one RFC 8785
+//!   canonicaliser) and `sha256_hex` (the one digest spelling);
+//! - `receipt_v1`: TunnelMind Receipt v1.0, the estate-wide envelope;
+//! - `manifest`: ADR-002 manifest parsing and its six validation rules.
+//!
+//! Software tier today (file-held key, Familiar-compatible scheme); a tee-tpm
+//! backend would be a second `RuneSigner` constructor, the receipt and verify
+//! paths unchanged. Everything that takes a receipt, manifest or key file as
+//! input treats it as untrusted and returns `Err` rather than panicking.
 
 #[cfg(feature = "manifest")]
 pub mod manifest;

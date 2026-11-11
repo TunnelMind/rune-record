@@ -1,0 +1,82 @@
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -12,6 +12,7 @@
+ //! paths unchanged. Everything that takes a receipt, manifest or key file as
+ //! input treats it as untrusted and returns `Err` rather than panicking.
+ 
++#[cfg(feature = "manifest")]
+ pub mod manifest;
+ pub mod receipt;
+ pub mod receipt_v1;
+--- a/src/manifest.rs
++++ b/src/manifest.rs
+@@ -216,7 +216,7 @@
+ mod tests {
+     use super::*;
+ 
+-    const EXAMPLE: &str = include_str!("../../../manifests/scry-rune-001.toml");
++    const EXAMPLE: &str = include_str!("../tests/fixtures/scry-rune-001.toml");
+ 
+     #[test]
+     fn example_manifest_validates() {
+--- a/src/receipt_v1/conformance.rs
++++ b/src/receipt_v1/conformance.rs
+@@ -14,7 +14,9 @@
+ //! receipt-verify 2.0.0 (the signer's key must be pinned as a bundle). The
+ //! runners differ on purpose: this one skips with a notice when node or
+ //! ~/receipt-verify is missing (CI has node but not the sibling checkout),
+-//! crawl-record fails unless TM_SKIP_JS_INTEROP=1.
++//! crawl-record fails unless TM_SKIP_JS_INTEROP=1. Set TM_REQUIRE_JS_INTEROP=1
++//! to turn that skip into a panic, so a run that must prove JS interop cannot
++//! pass silently.
+ 
+ use std::path::Path;
+ use std::process::Command;
+@@ -50,17 +52,13 @@
+ /// receipt goes to a temp file, never under the repo.
+ fn verify_with_node(receipt: &Value) -> Option<Value> {
+     if Command::new("node").arg("--version").output().is_err() {
+-        eprintln!("notice: node not on PATH; skipping receipt-verify interop test");
+-        return None;
++        return skip("node not on PATH");
+     }
+     let dist = std::env::var_os("HOME")
+         .map(|h| Path::new(&h).join("receipt-verify/dist/index.js"))
+         .filter(|p| p.exists());
+     if dist.is_none() {
+-        eprintln!(
+-            "notice: ~/receipt-verify/dist/index.js missing; skipping receipt-verify interop test"
+-        );
+-        return None;
++        return skip("~/receipt-verify/dist/index.js missing");
+     }
+     let d = tempfile::tempdir().unwrap();
+     let path = d.path().join("receipt.json");
+@@ -78,6 +76,16 @@
+     Some(serde_json::from_slice(&out.stdout).unwrap())
+ }
+ 
++/// The skip path of `verify_with_node`: a notice and None, or a panic when
++/// TM_REQUIRE_JS_INTEROP=1 says interop must actually run.
++fn skip(why: &str) -> Option<Value> {
++    if std::env::var("TM_REQUIRE_JS_INTEROP").as_deref() == Ok("1") {
++        panic!("TM_REQUIRE_JS_INTEROP=1 but {why}");
++    }
++    eprintln!("notice: {why}; skipping receipt-verify interop test");
++    None
++}
++
+ fn rune_signed(dir: &Path) -> Value {
+     let s = RuneSigner::load_or_generate(&dir.join("node.key")).unwrap();
+     let source = Source {
+--- a/src/receipt_v1/vectors.rs
++++ b/src/receipt_v1/vectors.rs
+@@ -10,7 +10,7 @@
+ use super::*;
+ 
+ fn vectors_dir() -> PathBuf {
+-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../vectors/receipt-v1")
++    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("vectors/receipt-v1")
+ }
+ 
+ #[test]

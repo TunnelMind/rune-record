@@ -4,17 +4,18 @@
 //! (pinned by `conformance.rs`: a committed crawl-record vector and the JS
 //! verifier itself).
 //!
-//! Data flow: `sign` takes a caller's payload (`from_attest` when that
-//! payload is an ADR-001 record); `verify` is what consumers such as
-//! tm-crawl's parity tests call.
+//! Data flow: `sign` is called by runecraft `receipt sign` with a caller's
+//! payload (`from_attest` when that payload is an ADR-001 record); `verify` by
+//! runecraft `receipt verify` and by tm-crawl's parity tests.
 //!
 //! Wire invariants: `payload_hash` is "0x" + hex SHA-256 of the payload's JCS
 //! bytes; the Ed25519 signature covers the JCS bytes of the receipt with
 //! `payload` and `signature.value` removed (receipt-verify's
 //! `buildSigningObject`); only JS-safe integers are signed (`check_numbers`).
-//! Trust boundary: `verify` takes an untrusted receipt and proves integrity
-//! under the key EMBEDDED in it; whether that key is a trusted TunnelMind key
-//! (bundle, revocations) is the caller's job. Fails closed, never panics.
+//! Trust boundary: `verify` is signature only, no trust decision: it proves
+//! an untrusted receipt is intact under the key EMBEDDED in it, which anyone
+//! can mint. For the trust call (key bundle, window, tier ceiling,
+//! revocations) use `verify_pinned`. Both fail closed, never panic.
 
 use anyhow::{bail, ensure, Context, Result};
 use base64::engine::general_purpose::STANDARD as B64;
@@ -47,8 +48,9 @@ pub struct Options {
     pub sequence: u64,
 }
 
-/// What a successful [`verify`] vouches for. Whether `public_key` is a
-/// trusted TunnelMind key is the caller's call (key bundle, revocations).
+/// What a successful [`verify`] vouches for: signature only, no trust
+/// decision (`public_key` is the receipt's own). Use `verify_pinned` for the
+/// trust call.
 #[derive(Debug)]
 pub struct Verified {
     pub receipt_id: String,
@@ -61,10 +63,9 @@ fn sha256_0x(bytes: &[u8]) -> String {
 }
 
 /// Refuse what JS would format or round differently from Rust: non-integers
-/// and integers outside ±(2^53-1). Public so tm-crawl's crawl-record can call
-/// it instead of the copy it kept when it adopted `jcs_bytes` (2026-10-19).
-/// A number the two sides print differently is a signature the JS verifier
-/// cannot check.
+/// and integers outside ±(2^53-1). A number the two sides print differently
+/// is a signature the JS verifier cannot check. Public for tm-crawl's
+/// crawl-record, which applies the same rule at its own signing boundary.
 pub fn check_numbers(v: &Value) -> Result<()> {
     const MAX_SAFE: u64 = (1 << 53) - 1;
     match v {
@@ -95,8 +96,7 @@ fn signing_bytes(receipt: &Value) -> Result<Vec<u8>> {
 
 /// Wrap `payload` as a signed Receipt v1.0: a fresh UUIDv7 `receipt_id`, the
 /// current time, `payload_hash`, the chain link and the signature block.
-/// Errors (rather than panics) on
-/// payloads with non-integer or unsafe numbers.
+/// Errors (rather than panics) on payloads with non-integer or unsafe numbers.
 pub fn sign(payload: Value, signer: &RuneSigner, source: Source, opts: Options) -> Result<Value> {
     let raw_pubkey = hex::decode(signer.pubkey_hex()).context("decoding signer pubkey hex")?;
     let key_id = opts
@@ -160,10 +160,10 @@ pub fn from_attest(
     sign(attest.clone(), signer, source, opts)
 }
 
-/// Pure-crypto verification (receipt-verify §4 steps 1-3): version, payload
-/// hash, and the signature against the embedded public key. No network.
-/// Step 4 (is the key in a trusted bundle, is anything revoked) is the
-/// caller's: a pass here means "untampered since signed by `public_key`".
+/// Signature only, no trust decision (receipt-verify §4 steps 1-3): version,
+/// payload hash, and the signature against the embedded public key. A pass
+/// means "untampered since signed by `public_key`", not "trusted"; use
+/// `verify_pinned` for the trust call (bundle, tier, revocations).
 pub fn verify(receipt: &Value) -> Result<Verified> {
     let str_at = |v: &Value, k: &str| v.get(k).and_then(Value::as_str).map(str::to_string);
 
@@ -298,65 +298,6 @@ mod tests {
         sig[0] ^= 1;
         r["signature"]["value"] = B64.encode(sig).into();
         assert!(verify(&r).is_err());
-    }
-
-    #[test]
-    fn standard_engine_refuses_non_canonical_base64() {
-        assert_eq!(B64.decode("Zg==").unwrap(), b"f");
-        for s in [
-            "Zh==",
-            "Zm9=",
-            "Zg=a",
-            "Z=g=",
-            "=Zg=",
-            "Zg==Zg==",
-            "Zm9v\n",
-            "Zm9v\r\nYg==",
-            "Zm9vYg==\n",
-            "====",
-        ] {
-            assert!(B64.decode(s).is_err(), "STANDARD accepted {s:?}");
-        }
-    }
-
-    /// Re-spellings of one canonical base64 string: trailing "\n", the last
-    /// data char swapped so only its unused trailing bits differ, and an
-    /// inner "\r\n". None is canonical, so each must fail decode and verify.
-    fn respellings(b64: &str) -> Vec<String> {
-        const ALPHA: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        let mut bytes = b64.as_bytes().to_vec();
-        let i = b64.trim_end_matches('=').len() - 1;
-        let six = ALPHA.iter().position(|&c| c == bytes[i]).unwrap();
-        // The low bit is always unused when the string ends in "=" or "==".
-        bytes[i] = ALPHA[six ^ 1];
-        let trailing_bits = String::from_utf8(bytes).unwrap();
-        assert_ne!(trailing_bits, b64);
-        let mid = b64.len() / 2;
-        vec![
-            format!("{b64}\n"),
-            trailing_bits,
-            format!("{}\r\n{}", &b64[..mid], &b64[mid..]),
-        ]
-    }
-
-    #[test]
-    fn respelled_signature_fields_fail_verify() {
-        let (_d, s) = signer();
-        let r = signed(&s, json!({"ok": true}), Options::default()).unwrap();
-        verify(&r).unwrap();
-        for field in ["value", "public_key"] {
-            let orig = r["signature"][field].as_str().unwrap().to_string();
-            assert!(orig.ends_with('='));
-            for spelling in respellings(&orig) {
-                assert!(
-                    B64.decode(&spelling).is_err(),
-                    "{field}: {spelling:?} decoded"
-                );
-                let mut bad = r.clone();
-                bad["signature"][field] = json!(spelling);
-                assert!(verify(&bad).is_err(), "{field}: {spelling:?} verified");
-            }
-        }
     }
 
     #[test]
@@ -525,3 +466,8 @@ mod tests {
 
 #[cfg(test)]
 mod conformance;
+#[cfg(test)]
+mod vectors;
+
+mod trust;
+pub use trust::*;

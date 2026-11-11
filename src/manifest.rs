@@ -1,9 +1,8 @@
 //! ADR-002 agent manifest (`rune.toml`): TOML parse + the six validation rules.
 //!
-//! Data flow: `runecraft build` stamps the self-referential hash
-//! (`stamp_hash`) and binds the node key, `wake` validates before emitting
-//! the boot receipt; the escalation path reads the validated `Manifest` for
-//! the Oracle's action vocabulary.
+//! Data flow: runecraft `build` stamps the self-referential hash and binds the
+//! node key, `wake` validates before emitting the boot receipt; rune-escalate
+//! reads the validated `Manifest` for the Oracle's action vocabulary.
 //!
 //! Trust boundary: the file is operator-authored and read from disk; `load`
 //! treats it as untrusted TOML. Build- and wake-fatal problems come back as

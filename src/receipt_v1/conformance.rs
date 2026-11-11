@@ -10,9 +10,9 @@
 //! SCRIPT is a synced copy of the one in
 //! `tm-crawl/crawl-record/tests/verify_js.rs` (a separate repo with no
 //! dependency edge to here, so the harness cannot be shared). When
-//! receipt-verify's contract changes, change both. Last synced 2026-10-19
-//! (receipt-verify 2.0.0: the key must be pinned as a bundle). The runners
-//! differ on purpose: this one skips with a notice when node or
+//! receipt-verify's contract changes, change both; today both speak
+//! receipt-verify 2.0.0 (the signer's key must be pinned as a bundle). The
+//! runners differ on purpose: this one skips with a notice when node or
 //! ~/receipt-verify is missing (CI has node but not the sibling checkout),
 //! crawl-record fails unless TM_SKIP_JS_INTEROP=1. Set TM_REQUIRE_JS_INTEROP=1
 //! to turn that skip into a panic, so a run that must prove JS interop cannot

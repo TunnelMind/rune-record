@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.0 — 2026-11-10
+
+**This repo is now a generated mirror.** The crate is generated from `crates/rune-record` in the
+private `rune` repo at commit `0018299` (full sha in [RUNE_SYNC](RUNE_SYNC)) by
+`scripts/sync-from-rune.sh`. This reverses v0.1.0's "this repo is the canonical Rune receipt
+crate": change the code in rune, then sync. See [docs/MIRROR.md](docs/MIRROR.md).
+
+- Adds `receipt_v1::verify_pinned` and `receipt_v1::TrustBundle`: verification that checks the
+  signer against a pinned key bundle, not just the key the receipt names.
+- Adds the 10 shared Receipt v1 vectors in `vectors/receipt-v1/`.
+- Adds `signing::write_pub_if_changed` (private): the `.pub` file is rewritten only when its
+  bytes differ, via a temp file and rename.
+- Public-only tests are kept: the base64 respelling tests live in `tests/receipt_v1_base64.rs`,
+  outside the synced tree.
+
 ## v0.1.0 — 2026-11-04
 
 **Version stays 0.1.0.** [docs/DIVERGENCE.md](docs/DIVERGENCE.md) concludes that no row changes

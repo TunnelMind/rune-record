@@ -1,0 +1,23 @@
+{
+  "description": "Payload holds 1.5; payload_hash recomputed and re-signed; JS 2.0.0 accepts it.",
+  "expected": "non_integer_number",
+  "js_receipt_verify_2_0_0": "valid",
+  "name": "float_payload",
+  "receipt": "{\"attestation_strength\":\"software\",\"chain\":{\"previous_receipt_hash\":null,\"sequence\":0},\"payload\":{\"x\":1.5},\"payload_hash\":\"0x461b06088af6528a5584517dd01a204856b291c4eead2bf678c9a6cc0e615623\",\"receipt_id\":\"01a1c72f-3233-7219-9374-84df17c04705\",\"receipt_version\":\"1.0\",\"signature\":{\"algorithm\":\"Ed25519\",\"key_id\":\"k1\",\"public_key\":\"cFC9GKvEy9J+iVpKYeRgIBdDYqdJZc3S3YpJii9omPA=\",\"value\":\"6APydLRY3W+Ad00M63ate6dWRatw2myIZsQQOfG7EMzmAMjKtUsdMe4jYqXKqeXr1LR9N0oMqLRLLmKblcs2AA==\"},\"source\":{\"endpoint\":\"/boot\",\"lens\":\"rune\",\"node_id\":\"scry-rune-001\"},\"timestamp\":\"2026-11-10T20:38:41.459Z\",\"timestamp_proof\":{\"method\":\"none\"}}",
+  "trust": {
+    "keys": {
+      "keys": [
+        {
+          "algorithm": "Ed25519",
+          "key_id": "k1",
+          "public_key": "cFC9GKvEy9J+iVpKYeRgIBdDYqdJZc3S3YpJii9omPA=",
+          "status": "active"
+        }
+      ]
+    },
+    "revocations": {
+      "revoked_keys": [],
+      "revoked_receipts": []
+    }
+  }
+}

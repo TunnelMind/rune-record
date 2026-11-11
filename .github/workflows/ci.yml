@@ -1,0 +1,14 @@
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: cargo test --locked
+      - run: cargo test --locked --no-default-features
+      # rune is private and there are no secrets, so --check runs in hash
+      # mode only (see the header of scripts/sync-from-rune.sh).
+      - run: scripts/sync-from-rune.sh --check

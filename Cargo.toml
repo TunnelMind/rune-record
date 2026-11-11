@@ -1,6 +1,6 @@
 [package]
 name = "rune-record"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "TunnelMind signed records: Receipt v1 signer/verifier (RFC 8785 JCS + Ed25519), ADR-001 receipts, ADR-002 Rune manifests"
 license = "Apache-2.0"
